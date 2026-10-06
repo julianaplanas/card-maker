@@ -283,6 +283,7 @@ function drag(el){
   const up=()=>{
     if(!held)return;held=false;el.classList.remove('held');
     const moved=Math.hypot(el.offsetLeft-sx,el.offsetTop-sy)>12,left=wasGlued&&moved;
+    if(!moved&&el._snd)hear(el._snd);
     if(left){residue(sx,sy,el,wasDry,sz);unglue(el);if(wasDry)snd.rip();}
     if(inside(el,bin,10)){toTrash(el);return;}
     if(inside(el,card,0)){
@@ -438,10 +439,18 @@ $('seal').addEventListener('click',()=>{audio();setFace('env');});
 /* ---------- recorded sound: hold to record, tap to hear it ---------- */
 let mic=null,opening=null;
 const REC_TYPE=window.MediaRecorder?(['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(m=>MediaRecorder.isTypeSupported(m))||''):'';
+/* the one place this app talks on screen: recording fails silently otherwise, so the microphone's state is always shown */
+function micSay(text,bad){tell(text);const m=$('micstate');m.textContent=text;m.classList.toggle('bad',!!bad);}
 function micOn(){
-  if(mic)return;
-  if(!navigator.mediaDevices||!window.MediaRecorder){tell('This browser cannot record sound.');return;}
-  navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{if(tool==='sound')mic=s;else s.getTracks().forEach(t=>t.stop());},()=>tell('The microphone is blocked. Allow it for this page to record.'));
+  if(mic){micSay('Microphone ready. Hold a piece to record.');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){micSay('This browser cannot record sound.',true);return;}
+  micSay('Asking for the microphone...');
+  navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
+    if(tool==='sound'){mic=s;micSay('Microphone ready. Hold a piece to record.');}else s.getTracks().forEach(t=>t.stop());
+  },err=>{
+    const none=err&&(err.name==='NotFoundError'||err.name==='OverconstrainedError');
+    micSay(none?'No microphone was found on this device.':'The microphone is blocked. Allow it for this site in your browser, then pick Sound again.',true);
+  });
 }
 function micOff(){if(mic){mic.getTracks().forEach(t=>t.stop());mic=null;}}
 function startRec(maxMs,done){
@@ -456,7 +465,8 @@ function startRec(maxMs,done){
     if(blob.size<200){done(null);return;}
     const fr=new FileReader();fr.onload=()=>done(fr.result);fr.onerror=()=>done(null);fr.readAsDataURL(blob);
   };
-  r.start();app.classList.add('recording');
+  try{r.start();}catch(e){clearTimeout(stopAt);return null;}
+  app.classList.add('recording');
   return r;
 }
 let heard=null;
@@ -464,21 +474,32 @@ function hear(url){try{if(heard)heard.pause();heard=new Audio(url);heard.play().
 /* one press does both jobs: a quick tap plays what is there, holding records over it */
 function press(el,e,maxMs,get,set){
   e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}
-  let r=null,over=false;
+  let r=null,over=false,began=0;
+  const had=!!get();
+  if(!mic)micOn();
+  /* something that already has a sound needs a clearly longer hold, so a slow tap plays it instead of wiping it */
   const wait=setTimeout(()=>{
     if(over)return;
-    r=startRec(maxMs,url=>{el.classList.remove('rec');if(url){set(url);snd.pop();tell('Recorded.');}else tell('Nothing was recorded.');});
-    if(r){el.classList.add('rec');tell('Recording. Let go to stop.');}
-    else tell(mic?'This browser cannot record sound.':'The microphone is not ready. Allow it for this page, then try again.');
-  },250);
+    began=Date.now();
+    r=startRec(maxMs,url=>{
+      el.classList.remove('rec');
+      if(url&&had&&Date.now()-began<700){micSay('Too short to replace the sound. The old one is kept.');hear(get());}
+      else if(url){set(url);snd.pop();micSay('Recorded. Tap it to hear it, hold to record again.');}
+      else micSay('Nothing was recorded. Hold a little longer.',true);
+    });
+    if(r){el.classList.add('rec');micSay('Recording... let go to stop.');}
+    else if(mic)micSay('This browser could not start recording.',true);
+  },had?500:200);
   const up=()=>{
     over=true;clearTimeout(wait);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
     if(r){if(r.state==='recording')r.stop();}
-    else{const u=get();if(u)hear(u);else{snd.tick();tell('Hold to record a sound.');}}
+    else{const u=get();if(u)hear(u);else if(mic){snd.tick();micSay('Keep holding to record.');}}
   };
   el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
 $('openrec').addEventListener('pointerdown',e=>{audio();press($('openrec'),e,10000,()=>opening,u=>{opening=u;$('openrec').classList.add('loud');});});
+/* a long press must not open the browser's own menu while recording */
+document.addEventListener('contextmenu',e=>{if(tool==='sound')e.preventDefault();});
 
 /* ---------- the envelope: try opening it, then seal it ---------- */
 function render(f,quietOnly){
