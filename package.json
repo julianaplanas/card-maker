@@ -1,0 +1,17 @@
+{
+  "name": "card-maker",
+  "version": "0.1.0",
+  "description": "Cut, glue and draw a collage card, put it in an envelope, and share it with a link.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "pg": "^8.13.0"
+  }
+}

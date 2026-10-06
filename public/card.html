@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A card for you</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+<style>
+html,body{height:100%}
+body{padding:16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#view{background:none;padding:0;min-height:0;max-width:100%}
+#view img{display:block;max-width:100%;max-height:74vh;width:auto;height:auto}
+.under{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.under a{display:flex;align-items:center;min-height:48px;padding:0 18px;background:var(--paper);color:var(--line);font-weight:700;text-decoration:none}
+.under a:focus-visible{outline:4px solid var(--red);outline-offset:-4px}
+</style>
+</head>
+<body>
+<button type="button" id="view" aria-label="An envelope. Tap to open it."><img id="pic" alt="A closed envelope"></button>
+<p id="say" class="sr" role="status"></p>
+<div class="under"><a href="/">MAKE YOUR OWN</a></div>
+<script src="/card.js"></script>
+</body>
+</html>

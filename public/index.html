@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Card Maker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app" class="nosheet">
+  <header>
+    <h1>CARD MAKER</h1>
+  </header>
+
+  <div id="shelf">
+    <button type="button" class="box" data-box="mags">MAGAZINES</button>
+    <button type="button" class="box" data-box="paint">PAINTINGS</button>
+    <label class="box pick">YOUR PICTURES<input id="file" type="file" accept="image/*"></label>
+    <span class="gap"></span>
+    <button id="newcard" type="button">NEW CARD</button>
+    <button type="button" id="seal">ENVELOPE</button>
+    <button id="bin" type="button" aria-label="Trash can. Double-click to take the last thing out.">
+      <svg width="52" height="60" viewBox="0 0 52 60" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="square" aria-hidden="true"><path d="M4 14h44M18 14V6h16v8M9 14l4 42h26l4-42M21 24v22M31 24v22"/></svg>
+      <span>TRASH: <span id="count">0</span></span>
+    </button>
+  </div>
+  <p id="say" class="sr" role="status"></p>
+
+  <section class="cell work" id="table" aria-label="The table">
+    <h2>THE TABLE</h2>
+    <div id="sheet" hidden>
+      <div id="grip" role="button" tabindex="0" aria-label="Handle of the sheet. Drag it to a box to put the sheet back, or to the trash."><span class="bars" aria-hidden="true"></span><span id="sheetname"></span></div>
+      <div class="stage" id="stage">
+      <canvas id="page" aria-label="The sheet you are cutting from"></canvas>
+      <canvas id="ink" aria-hidden="true"></canvas>
+      </div>
+    </div>
+    <div class="tools" id="cutbar" role="group" aria-label="Ways to cut the sheet" hidden>
+      <button type="button" data-cut="hand" aria-pressed="false">HAND</button>
+      <button type="button" data-cut="scissors" aria-pressed="true">SCISSORS</button>
+      <button type="button" data-cut="tear" aria-pressed="false">TEAR</button>
+      <button type="button" data-cut="punch" aria-pressed="false">HOLE PUNCH</button>
+      <button type="button" data-cut="star" aria-pressed="false">STAR CUTTER</button>
+      <button type="button" data-cut="heart" aria-pressed="false">HEART CUTTER</button>
+    </div>
+  </section>
+
+  <section class="cell work" id="cardcell" aria-label="The card">
+    <div class="cardhead">
+      <h2>THE CARD</h2>
+      <div class="faces" role="group" aria-label="Which side of the card">
+        <button type="button" data-face="front" aria-pressed="true">FRONT</button>
+        <button type="button" data-face="open" aria-pressed="false">OPEN</button>
+        <button type="button" data-face="env" aria-pressed="false">ENVELOPE</button>
+      </div>
+    </div>
+    <div id="card"><span id="cardhint" hidden></span></div>
+    <div class="tools" id="envbar" hidden>
+      <button type="button" class="r" id="tryit">PUT THE CARD IN</button>
+    </div>
+    <div class="tools" role="group" aria-label="Tools for the card">
+      <button type="button" data-tool="hand" aria-pressed="true">HAND</button>
+      <button type="button" class="k" id="penbtn" data-tool="pen" aria-pressed="false">PEN</button>
+      <button type="button" class="g" data-tool="glitter" aria-pressed="false">GLITTER</button>
+      <button type="button" data-tool="white" aria-pressed="false">WHITE-OUT</button>
+      <button type="button" class="soon" disabled>TAPE<small>soon</small></button>
+      <button type="button" class="soon" disabled>STAMPS<small>soon</small></button>
+      <button type="button" class="soon" disabled>LETTERS<small>soon</small></button>
+      <button type="button" class="soon" disabled>COPIER<small>soon</small></button>
+      <button type="button" class="soon" disabled>PINS<small>soon</small></button>
+      <button type="button" class="soon" disabled>FLIP<small>soon</small></button>
+      <button type="button" class="soon" disabled>SOUND<small>soon</small></button>
+      <button type="button" class="soon" disabled>MOVEMENT<small>soon</small></button>
+    </div>
+    <div class="tools" id="penopts" role="group" aria-label="Options for what you are holding" hidden>
+      <button type="button" class="k" data-color="black" aria-pressed="true">BLACK</button>
+      <button type="button" class="r" data-color="red" aria-pressed="false">RED</button>
+      <button type="button" class="b" data-color="blue" aria-pressed="false">BLUE</button>
+      <button type="button" class="tip" data-size="0.45" aria-pressed="false"><span class="dot" style="width:6px;height:6px"></span>THIN</button>
+      <button type="button" class="tip" data-size="1" aria-pressed="true"><span class="dot" style="width:12px;height:12px"></span>MEDIUM</button>
+      <button type="button" class="tip" data-size="2.4" aria-pressed="false"><span class="dot" style="width:22px;height:22px"></span>FAT</button>
+    </div>
+  </section>
+
+
+  <div id="layer"></div>
+
+  <div id="mail" hidden>
+    <div class="mailbox">
+      <button type="button" id="mailview" aria-label="What they will receive. Tap to open it."><canvas id="mailcv"></canvas></button>
+      <div class="mailbar">
+        <button type="button" id="mailback">TAKE IT BACK OUT</button>
+        <button type="button" id="mailseal">CLOSE THE ENVELOPE</button>
+        <div id="maillink" hidden>
+          <span id="linktext"></span>
+          <button type="button" id="copy">COPY LINK</button>
+          <button type="button" id="share" hidden>SHARE</button>
+          <button type="button" id="retry" hidden>TRY AGAIN</button>
+          <button type="button" id="again">MAKE ANOTHER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
