@@ -273,6 +273,7 @@ function drag(el){
   let held=false,ox=0,oy=0,sx=0,sy=0,sz='6',wasGlued=false,wasDry=false;
   el.addEventListener('pointerdown',e=>{
     audio();
+    if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
     sx=el.offsetLeft;sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
     held=true;try{el.setPointerCapture(e.pointerId);}catch(_){}
     ox=e.clientX-el.offsetLeft;oy=e.clientY-el.offsetTop;
@@ -326,7 +327,7 @@ function place(){
     const dx=ox-o.x,dy=oy-o.y;
     layer.querySelectorAll('.piece,.goo').forEach(p=>{if(p.dataset.face===face){p.style.left=(parseFloat(p.style.left)+dx)+'px';p.style.top=(parseFloat(p.style.top)+dy)+'px';}});
   }
-  origin[face]={x:ox,y:oy,w:c.width};
+  origin[face]={x:ox,y:oy,w:c.width,h:c.height};
   layer.querySelectorAll('.ink').forEach(m=>{m.style.left=(c.left-a.left)+'px';m.style.top=(c.top-a.top)+'px';m.style.width=c.width+'px';m.style.height=c.height+'px';});
 }
 place();window.addEventListener('resize',place);
@@ -340,6 +341,8 @@ toolBtns.forEach(b=>b.addEventListener('click',()=>{
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
   marks.classList.toggle('on',PENS.includes(tool));$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
+  app.classList.toggle('sounding',tool==='sound');$('sndopts').hidden=tool!=='sound';
+  if(tool==='sound')micOn();else micOff();
   tell(b.textContent.trim()+' picked up.');
 }));
 function mpos(e){const r=marks.getBoundingClientRect();return [(e.clientX-r.left)*MW/r.width,(e.clientY-r.top)*MH/r.height];}
@@ -432,8 +435,53 @@ function setFace(f){
 faceBtns.forEach(b=>b.addEventListener('click',()=>{audio();setFace(b.dataset.face);}));
 $('seal').addEventListener('click',()=>{audio();setFace('env');});
 
+/* ---------- recorded sound: hold to record, tap to hear it ---------- */
+let mic=null,opening=null;
+const REC_TYPE=window.MediaRecorder?(['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(m=>MediaRecorder.isTypeSupported(m))||''):'';
+function micOn(){
+  if(mic)return;
+  if(!navigator.mediaDevices||!window.MediaRecorder){tell('This browser cannot record sound.');return;}
+  navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{if(tool==='sound')mic=s;else s.getTracks().forEach(t=>t.stop());},()=>tell('The microphone is blocked. Allow it for this page to record.'));
+}
+function micOff(){if(mic){mic.getTracks().forEach(t=>t.stop());mic=null;}}
+function startRec(maxMs,done){
+  if(!mic)return null;
+  const chunks=[];let r;
+  try{r=new MediaRecorder(mic,REC_TYPE?{mimeType:REC_TYPE}:undefined);}catch(e){return null;}
+  const stopAt=setTimeout(()=>{if(r.state==='recording')r.stop();},maxMs);
+  r.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  r.onstop=()=>{
+    clearTimeout(stopAt);app.classList.remove('recording');
+    const blob=new Blob(chunks,{type:r.mimeType||REC_TYPE||'audio/webm'});
+    if(blob.size<200){done(null);return;}
+    const fr=new FileReader();fr.onload=()=>done(fr.result);fr.onerror=()=>done(null);fr.readAsDataURL(blob);
+  };
+  r.start();app.classList.add('recording');
+  return r;
+}
+let heard=null;
+function hear(url){try{if(heard)heard.pause();heard=new Audio(url);heard.play().catch(()=>{});}catch(e){}}
+/* one press does both jobs: a quick tap plays what is there, holding records over it */
+function press(el,e,maxMs,get,set){
+  e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}
+  let r=null,over=false;
+  const wait=setTimeout(()=>{
+    if(over)return;
+    r=startRec(maxMs,url=>{el.classList.remove('rec');if(url){set(url);snd.pop();tell('Recorded.');}else tell('Nothing was recorded.');});
+    if(r){el.classList.add('rec');tell('Recording. Let go to stop.');}
+    else tell(mic?'This browser cannot record sound.':'The microphone is not ready. Allow it for this page, then try again.');
+  },250);
+  const up=()=>{
+    over=true;clearTimeout(wait);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
+    if(r){if(r.state==='recording')r.stop();}
+    else{const u=get();if(u)hear(u);else{snd.tick();tell('Hold to record a sound.');}}
+  };
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+}
+$('openrec').addEventListener('pointerdown',e=>{audio();press($('openrec'),e,10000,()=>opening,u=>{opening=u;$('openrec').classList.add('loud');});});
+
 /* ---------- the envelope: try opening it, then seal it ---------- */
-function render(f){
+function render(f,quietOnly){
   const cw=f==='front'?600:1200,cv=document.createElement('canvas');cv.width=cw;cv.height=MH;
   const c=cv.getContext('2d');
   c.fillStyle=f==='env'?'#f6f1e3':'#ffffff';c.fillRect(0,0,cw,MH);
@@ -443,7 +491,7 @@ function render(f){
   const o=origin[f];
   if(o){
     const k=cw/o.w;
-    [...layer.querySelectorAll('.piece,.goo')].filter(p=>p.dataset.face===f).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
+    [...layer.querySelectorAll('.piece,.goo')].filter(p=>p.dataset.face===f&&!(quietOnly&&p._snd)).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
       const w=parseFloat(p.style.width),h=parseFloat(p.style.height),x=parseFloat(p.style.left)-o.x,y=parseFloat(p.style.top)-o.y;
       c.save();c.scale(k,k);c.translate(x+w/2,y+h/2);
       if(p.classList.contains('goo')){c.fillStyle=p.style.background;c.beginPath();c.ellipse(0,0,w/2,h/2,0,0,7);c.fill();}
@@ -454,25 +502,27 @@ function render(f){
   c.strokeStyle='#111111';c.lineWidth=8;c.strokeRect(4,4,cw-8,MH-8);
   return cv;
 }
-const mail=$('mail'),mailcv=$('mailcv'),STAGES=['env','front','open'];
-let shots=null,stageAt=0,sealed=false;
-function showStage(i,stamp){
-  stageAt=i;const s=shots[STAGES[i]];mailcv.width=s.width;mailcv.height=s.height;
-  const c=mailcv.getContext('2d');c.drawImage(s,0,0);
-  mailcv.classList.toggle('tall',STAGES[i]==='front');
+const mail=$('mail'),mailcv=$('mailcv'),mailstage=$('mailstage');
+let shots=null,flat=null,extras=null,viewer=null,sealed=false;
+function loudPieces(){
+  const out=[];
+  [...layer.querySelectorAll('.piece')].filter(p=>p._snd&&p.dataset.face&&origin[p.dataset.face]).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
+    const o=origin[p.dataset.face],w=parseFloat(p.style.width),h=parseFloat(p.style.height);
+    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd});
+  });
+  return out;
 }
 $('tryit').addEventListener('click',()=>{
-  audio();shots={env:render('env'),front:render('front'),open:render('open')};sealed=false;
+  audio();micOff();
+  const pic=c=>c.toDataURL('image/jpeg',0.85),all=['env','front','open'];
+  shots={};flat={};all.forEach(f=>{shots[f]=render(f,false);flat[f]=pic(render(f,true));});
+  extras={sounds:loudPieces(),opening:opening};sealed=false;
   $('mailback').hidden=false;$('mailseal').hidden=false;$('maillink').hidden=true;
-  mail.hidden=false;showStage(0,false);noise(.12,'bandpass',700,.25);tell('The envelope, as they will get it. Tap it to open.');
+  mailcv.hidden=true;mailstage.hidden=false;mail.hidden=false;
+  viewer=CardViewer.mount(mailstage,{faces:flat,sounds:extras.sounds,opening:extras.opening},tell);
+  noise(.12,'bandpass',700,.25);tell('The envelope, as they will get it. Tap it to open.');
 });
-$('mailview').addEventListener('click',()=>{
-  audio();if(sealed){snd.tick();tell('The envelope is closed.');return;}
-  const n=(stageAt+1)%STAGES.length;showStage(n,false);
-  if(n===1)snd.rip();else noise(.12,'bandpass',700,.25);
-  tell(n===1?'The front of the card.':n===2?'The card, open.':'Back in the envelope.');
-});
-$('mailback').addEventListener('click',()=>{audio();mail.hidden=true;tell('Back at the table.');});
+$('mailback').addEventListener('click',()=>{audio();if(viewer)viewer.stop();mail.hidden=true;tell('Back at the table.');});
 /* the card slides into the envelope and the flap folds shut */
 function closeUp(done){
   const CW=1200,CH=840,c=mailcv.getContext('2d');mailcv.width=CW;mailcv.height=CH;mailcv.classList.remove('tall');
@@ -499,8 +549,7 @@ function closeUp(done){
 }
 /* closing the envelope saves the card on the server and gives back its link */
 function saveCard(){
-  const pic=c=>c.toDataURL('image/jpeg',0.85);
-  return fetch('/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({env:pic(shots.env),front:pic(shots.front),open:pic(shots.open)})})
+  return fetch('/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({env:flat.env,front:flat.front,open:flat.open,extras:extras})})
     .then(r=>r.ok?r.json():Promise.reject(new Error('save failed')));
 }
 function showSaved(r){
@@ -517,6 +566,7 @@ function showSaved(r){
 }
 $('mailseal').addEventListener('click',()=>{
   audio();sealed=true;$('mailback').hidden=true;$('mailseal').hidden=true;
+  if(viewer)viewer.stop();mailstage.hidden=true;mailcv.hidden=false;
   noise(.5,'bandpass',600,.3);
   const saved=saveCard().catch(()=>null);
   closeUp(()=>{snd.glue();saved.then(showSaved);});
@@ -533,7 +583,8 @@ function wipe(faces){
   faces.forEach(f=>{const b=BASES[f];b.getContext('2d').clearRect(0,0,b.width,b.height);});
   wt.clearRect(0,0,MW,MH);
 }
-$('again').addEventListener('click',()=>{audio();wipe(['front','open','env']);mail.hidden=true;setFace('front');tell('A new card. Your table is as you left it.');});
-$('newcard').addEventListener('click',()=>{audio();wipe(['front','open']);snd.rip();tell('A new, empty card.');});
+$('again').addEventListener('click',()=>{audio();wipe(['front','open','env']);opening=null;$('openrec').classList.remove('loud');mail.hidden=true;setFace('front');tell('A new card. Your table is as you left it.');});
+function quiet(){opening=null;$('openrec').classList.remove('loud');}
+$('newcard').addEventListener('click',()=>{audio();wipe(['front','open']);quiet();snd.rip();tell('A new, empty card.');});
 
 })();

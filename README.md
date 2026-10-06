@@ -12,11 +12,12 @@ It follows two rules:
 - **Boxes of material**: Magazines, Paintings and Your pictures. Tap a box to take a random sheet out; drag the sheet back onto a box, or into the trash. A sheet keeps its holes.
 - **Cutting a sheet**: scissors, tear, hole punch, and star and heart cutters.
 - **The card**: a front and an inside. Pens in three colors and three tips, glitter glue and white-out. Glue dries after 8 seconds.
+- **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card.
 - **The trash**: drag anything into it. Double-click to take the last thing back out, then click for the ones before it.
 - **The envelope**: decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
-- **The link**: whoever opens it gets the envelope, then the front, then the inside.
+- **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound wiggle when their side appears and play when tapped.
 
-The pictures in the boxes are placeholder drawings. Tape, stamps, letters, a copier, pins, flipping pieces, recorded sound and movement are listed in the tool rows as "soon" and are not built yet.
+The pictures in the boxes are placeholder drawings. Tape, stamps, letters, a copier, pins, flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
 
 ## Run it on your computer
 
@@ -50,17 +51,21 @@ public/index.html   the maker's page
 public/style.css    all the styles
 public/app.js       everything the maker's page does
 public/card.html    the page a recipient opens
-public/card.js      opening the envelope and the card
+public/card.js      loads a saved card for the recipient
+public/viewer.js    shows a card as its recipient sees it (used by the preview too)
 public/missing.html shown when a link does not lead to a card
 ```
 
-A closed card is stored as three pictures (the envelope, the front and the inside) under a short random code. The link is `/card/<code>`. Anyone who has the link can open the card; there are no accounts.
+A closed card is stored as three pictures (the envelope, the front and the inside) under a short random code. Pieces that carry a sound are stored separately, each with its picture, its place on the card and its recording, so they can sit on top of the picture and react to a tap. The link is `/card/<code>`. Anyone who has the link can open the card; there are no accounts.
 
-The server accepts at most 30 new cards per hour from one address, and each picture can be at most 3 MB.
+The server accepts at most 30 new cards per hour from one address, and each picture can be at most 3 MB. A card can carry up to 40 sounds.
 
 ## Things to know
 
 - A card cannot be changed or deleted once its envelope is closed.
 - Cards are kept forever; nothing removes old ones yet.
 - The table (loose pieces, sheets, the trash) lasts only while the page is open.
+- Recording needs the browser's permission to use the microphone, and the page must be served over https (Railway does this) or from localhost.
+- Recordings use the format the maker's browser produces. Most combinations play fine, but an older Safari may not play a recording made in Chrome or Firefox.
+- A piece with a sound always shows on top of the other pieces for the recipient, even if you glued something over it.
 - On a phone, a piece cannot yet be dragged from a sheet to a card that is off screen.

@@ -6,7 +6,7 @@ const crypto = require('crypto');
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '8mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 const SIDES = ['env', 'front', 'open'];
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -24,13 +24,18 @@ function pgStore(url) {
       front bytea NOT NULL,
       open bytea NOT NULL,
       created_at timestamptz NOT NULL DEFAULT now()
-    )`);
+    )`).then(() => pool.query('ALTER TABLE cards ADD COLUMN IF NOT EXISTS extras text'));
   return {
     name: 'postgres',
     ready,
-    async save(id, images) {
+    async save(id, images, extras) {
       await ready;
-      await pool.query('INSERT INTO cards (id, env, front, open) VALUES ($1, $2, $3, $4)', [id, images.env, images.front, images.open]);
+      await pool.query('INSERT INTO cards (id, env, front, open, extras) VALUES ($1, $2, $3, $4, $5)', [id, images.env, images.front, images.open, extras]);
+    },
+    async loadExtras(id) {
+      await ready;
+      const r = await pool.query('SELECT extras FROM cards WHERE id = $1', [id]);
+      return r.rows.length ? r.rows[0].extras : null;
     },
     async load(id, side) {
       await ready;
@@ -51,10 +56,18 @@ function fileStore(dir) {
   return {
     name: 'files in ' + dir,
     ready: Promise.resolve(),
-    async save(id, images) {
+    async save(id, images, extras) {
       const folder = path.join(dir, id);
       await fs.promises.mkdir(folder);
       await Promise.all(SIDES.map((s) => fs.promises.writeFile(path.join(folder, s + '.jpg'), images[s])));
+      await fs.promises.writeFile(path.join(folder, 'extras.json'), extras);
+    },
+    async loadExtras(id) {
+      try {
+        return await fs.promises.readFile(path.join(dir, id, 'extras.json'), 'utf8');
+      } catch (e) {
+        return null;
+      }
     },
     async load(id, side) {
       try {
@@ -100,6 +113,40 @@ function readImage(dataUrl) {
   return buf;
 }
 
+// Sounds travel as text: each recording, and the picture of the piece it belongs to, is a data: address.
+const AUDIO = /^data:audio\/(webm|mp4|ogg)(;codecs=[A-Za-z0-9.,_-]+)?;base64,[A-Za-z0-9+/=]+$/;
+const PNG = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
+const MAX_SOUNDS = 40;
+const MAX_AUDIO_CHARS = 700000; // about half a megabyte of sound
+const MAX_PIECE_CHARS = 2000000;
+
+function readAudio(v) {
+  return typeof v === 'string' && v.length <= MAX_AUDIO_CHARS && AUDIO.test(v) ? v : null;
+}
+
+// Returns a cleaned copy holding only what the viewer needs, or null if anything looks wrong.
+function readExtras(raw) {
+  if (raw == null) return { sounds: [], opening: null };
+  if (typeof raw !== 'object' || (raw.sounds != null && !Array.isArray(raw.sounds))) return null;
+  const list = raw.sounds || [];
+  if (list.length > MAX_SOUNDS) return null;
+  const sounds = [];
+  for (const s of list) {
+    if (!s || !SIDES.includes(s.face)) return null;
+    const nums = [s.x, s.y, s.w, s.h, s.r].map(Number);
+    if (nums.some((n) => !Number.isFinite(n) || Math.abs(n) > 400)) return null;
+    const audio = readAudio(s.audio);
+    if (!audio || typeof s.img !== 'string' || s.img.length > MAX_PIECE_CHARS || !PNG.test(s.img)) return null;
+    sounds.push({ face: s.face, x: nums[0], y: nums[1], w: nums[2], h: nums[3], r: nums[4], img: s.img, audio });
+  }
+  let opening = null;
+  if (raw.opening != null) {
+    opening = readAudio(raw.opening);
+    if (!opening) return null;
+  }
+  return { sounds, opening };
+}
+
 app.post('/api/cards', async (req, res) => {
   if (!allowed(req.ip)) return res.status(429).json({ error: 'Too many cards from this address. Try again later.' });
   const images = {};
@@ -107,13 +154,28 @@ app.post('/api/cards', async (req, res) => {
     images[side] = readImage(req.body && req.body[side]);
     if (!images[side]) return res.status(400).json({ error: 'The card pictures are missing or not valid.' });
   }
+  const extras = readExtras(req.body.extras);
+  if (!extras) return res.status(400).json({ error: 'The card sounds are not valid.' });
   try {
     const id = crypto.randomBytes(6).toString('base64url');
-    await store.save(id, images);
+    await store.save(id, images, JSON.stringify(extras));
     res.status(201).json({ id });
   } catch (e) {
     console.error('Could not save a card:', e.message);
     res.status(500).json({ error: 'The card could not be saved.' });
+  }
+});
+
+app.get('/api/cards/:id/extras.json', async (req, res) => {
+  if (!ID_PATTERN.test(req.params.id)) return res.status(404).end();
+  try {
+    const extras = await store.loadExtras(req.params.id);
+    res.set('Content-Type', 'application/json');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(extras || '{"sounds":[],"opening":null}');
+  } catch (e) {
+    console.error('Could not load a card:', e.message);
+    res.status(500).end();
   }
 });
 

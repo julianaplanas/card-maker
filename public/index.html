@@ -64,13 +64,13 @@
       <button type="button" class="k" id="penbtn" data-tool="pen" aria-pressed="false">PEN</button>
       <button type="button" class="g" data-tool="glitter" aria-pressed="false">GLITTER</button>
       <button type="button" data-tool="white" aria-pressed="false">WHITE-OUT</button>
+      <button type="button" data-tool="sound" aria-pressed="false">SOUND</button>
       <button type="button" class="soon" disabled>TAPE<small>soon</small></button>
       <button type="button" class="soon" disabled>STAMPS<small>soon</small></button>
       <button type="button" class="soon" disabled>LETTERS<small>soon</small></button>
       <button type="button" class="soon" disabled>COPIER<small>soon</small></button>
       <button type="button" class="soon" disabled>PINS<small>soon</small></button>
       <button type="button" class="soon" disabled>FLIP<small>soon</small></button>
-      <button type="button" class="soon" disabled>SOUND<small>soon</small></button>
       <button type="button" class="soon" disabled>MOVEMENT<small>soon</small></button>
     </div>
     <div class="tools" id="penopts" role="group" aria-label="Options for what you are holding" hidden>
@@ -81,6 +81,9 @@
       <button type="button" class="tip" data-size="1" aria-pressed="true"><span class="dot" style="width:12px;height:12px"></span>MEDIUM</button>
       <button type="button" class="tip" data-size="2.4" aria-pressed="false"><span class="dot" style="width:22px;height:22px"></span>FAT</button>
     </div>
+    <div class="tools" id="sndopts" role="group" aria-label="Sound for a moment" hidden>
+      <button type="button" id="openrec">WHEN THE CARD OPENS</button>
+    </div>
   </section>
 
 
@@ -88,7 +91,8 @@
 
   <div id="mail" hidden>
     <div class="mailbox">
-      <button type="button" id="mailview" aria-label="What they will receive. Tap to open it."><canvas id="mailcv"></canvas></button>
+      <div id="mailstage"></div>
+      <canvas id="mailcv" hidden></canvas>
       <div class="mailbar">
         <button type="button" id="mailback">TAKE IT BACK OUT</button>
         <button type="button" id="mailseal">CLOSE THE ENVELOPE</button>
@@ -103,6 +107,7 @@
     </div>
   </div>
 </div>
+<script src="/viewer.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
