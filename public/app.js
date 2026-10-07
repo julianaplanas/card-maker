@@ -470,7 +470,7 @@ function carryTool(el,e,fresh){
     if(!moved){
       /* a plain tap: out of the box it lands somewhere free and is in your hand; on the table it is picked up or put down */
       if(fresh){const p=freeSpot(it);el.style.left=(p[0]-it.w/2)+'px';el.style.top=(p[1]-it.h/2)+'px';activate(it);}
-      else if(holding===it){putDown();snd.tick();}else{activate(it);snd.tick();}
+      else if(holding!==it){activate(it);snd.tick();}
       return;
     }
     if(inside(el,bin,10)){if(holding===it)putDown();toTrash(el);return;}
@@ -589,7 +589,11 @@ function setTool(t){
 function follow(e){
   const it=holding;if(!it||it.machine||!it.el||!it.el.isConnected)return;
   const a=app.getBoundingClientRect(),c=card.getBoundingClientRect(),x=Math.max(c.left,Math.min(c.right,e.clientX))-a.left,y=Math.max(c.top,Math.min(c.bottom,e.clientY))-a.top;
-  if(it.kind==='tape'){it.el.style.left=(x-it.w*.34)+'px';it.el.style.top=(y-it.h/2)+'px';it.el.style.setProperty('--r','0deg');}
+  if(it.kind==='tape'){
+    /* the roll runs ahead of the strip, so the end of the tape is never underneath it */
+    let ux=0,uy=-1;if(pull){const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d>4){ux=(pull.x1-pull.x0)/d;uy=(pull.y1-pull.y0)/d;}}
+    it.el.style.left=(x+ux*34-30)+'px';it.el.style.top=(y+uy*34-30)+'px';it.el.style.setProperty('--r','0deg');
+  }
   else{const d=Math.max(it.w,it.h)*.5+14;it.el.style.left=(x+d*.75-it.w/2)+'px';it.el.style.top=(y-d*.75-it.h/2)+'px';}
 }
 function mpos(e){const r=marks.getBoundingClientRect();return [(e.clientX-r.left)*MW/r.width,(e.clientY-r.top)*MH/r.height];}
@@ -920,8 +924,8 @@ function stick(){
 }
 marks.addEventListener('pointerdown',e=>{
   audio();
-  /* another tool lying on the card is still a thing you can take hold of while you draw; the one in your hand never gets in its own way */
-  const lying=[...layer.querySelectorAll('.loose')].sort((p,q)=>(+q.style.zIndex||0)-(+p.style.zIndex||0)).find(el=>{if(holding&&holding.el===el)return false;const r=el.getBoundingClientRect();return e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom;});
+  /* a tool lying on the card is a thing you can take hold of and carry away, the one in your hand included */
+  const lying=[...layer.querySelectorAll('.loose')].sort((p,q)=>(+q.style.zIndex||0)-(+p.style.zIndex||0)).find(el=>{const r=el.getBoundingClientRect(),m=holding&&holding.el===el?12:0;return e.clientX>r.left+m&&e.clientX<r.right-m&&e.clientY>r.top+m&&e.clientY<r.bottom-m;});
   if(lying){e.preventDefault();carryTool(lying,e,false);return;}
   try{marks.setPointerCapture(e.pointerId);}catch(_){}
   follow(e);
@@ -931,8 +935,8 @@ marks.addEventListener('pointerdown',e=>{
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;e.preventDefault();
 });
 marks.addEventListener('pointermove',e=>{
-  if(pull||mp)follow(e);
-  if(pull){pulling(e);return;}
+  if(pull){pulling(e);follow(e);return;}
+  if(mp)follow(e);
   if(!mp)return;const p=mpos(e),d=Math.hypot(p[0]-mp[0],p[1]-mp[1]);if(d<3)return;
   seg(mp,p);mp=p;mtrav+=d;if(mtrav>70){mtrav=0;snd.mark();}
 });
