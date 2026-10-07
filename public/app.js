@@ -326,7 +326,8 @@ function pick(el){picked=el;placeTurn();}
 function turned(el,wasGlued,wasDry,was){
   if(!wasGlued)return;
   if(el.dataset.sticky){tear(el,el.offsetLeft,el.offsetTop,was);snd.rip();return;}
-  residue(el.offsetLeft,el.offsetTop,el,wasDry,el.style.zIndex);unglue(el);if(wasDry)snd.rip();
+  /* the old glue stays on the card, under the piece: the piece is lifted above it */
+  residue(el.offsetLeft,el.offsetTop,el,wasDry,el.style.zIndex);el.style.zIndex=String(++z);unglue(el);if(wasDry)snd.rip();
   if(inside(el,card,0)){
     el.dataset.glued='1';el.dataset.face=face;el.classList.add('wet');snd.glue();
     el._t=setTimeout(()=>{el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');},DRY);
