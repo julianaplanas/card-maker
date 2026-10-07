@@ -157,15 +157,16 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 #stampopts .k[aria-pressed=true]{background:#3a3a3a;outline-color:var(--on-dark)}
 #stampopts .r[aria-pressed=true]{background:var(--red);outline-color:var(--on-dark)}
 #stampopts .b[aria-pressed=true]{background:var(--blue);outline-color:var(--on-dark)}
-/* a sheet of sticker letters: every sticker can be peeled off once */
+/* a sheet of sticker letters: every sticker is shown as it is, and can be peeled off once */
 #letteropts{display:block}
 #sheets{display:flex;gap:var(--gap);margin-bottom:var(--gap)}
 #sheets button{flex:1}
-#sheets [aria-pressed=true]{outline:4px solid var(--on-dark);outline-offset:-8px}
-#sheets .k[aria-pressed=true]{background:#3a3a3a}#sheets .r[aria-pressed=true]{background:var(--red)}#sheets .b[aria-pressed=true]{background:var(--blue)}
-#stickers{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:4px;background:var(--paper);padding:8px}
-#stickers button{position:relative;min-height:46px;padding:0;background:none;font:900 26px "Arial Black",Impact,sans-serif;color:var(--ink,#111);-webkit-text-stroke:0}
-#stickers button small{position:absolute;right:3px;bottom:1px;font:400 11px monospace;color:#5c5c5c}
-#stickers button[aria-pressed=true]{outline:3px solid var(--line);outline-offset:-3px;translate:0 -3px;background:var(--yellow)}
-#stickers button:disabled{color:transparent;outline:2px dashed #b9b4a6;outline-offset:-8px;cursor:default}
-#stickers button:disabled small{display:none}
+#sheets [aria-pressed=true]{background:var(--yellow);color:var(--line);outline:4px solid var(--line);outline-offset:-8px}
+#stickers{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:2px;padding:12px;background:#dfe7ec;background-image:linear-gradient(115deg,rgba(255,255,255,.55) 0 18%,transparent 18% 46%,rgba(255,255,255,.35) 46% 54%,transparent 54%);border:3px solid var(--paper)}
+#stickers button{min-height:46px;padding:0;background:none;display:flex;align-items:center;justify-content:center}
+#stickers button img{height:44px;width:auto;max-width:100%;display:block;pointer-events:none}
+#stickers button[aria-pressed=true]{translate:0 -5px;rotate:-6deg;filter:drop-shadow(3px 5px 0 rgba(17,17,17,.35))}
+#stickers button:disabled{cursor:default}
+#stickers button:disabled img{opacity:0}
+#stickers button:disabled::after{content:"";width:26px;height:32px;border:2px dashed rgba(17,17,17,.18);border-radius:6px}
+#stickers button:disabled img{position:absolute}

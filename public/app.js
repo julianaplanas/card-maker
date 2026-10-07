@@ -449,32 +449,65 @@ function press1(p){
   wt.save();wt.translate(p[0],p[1]);wt.rotate((Math.random()-.5)*.2);wt.globalAlpha=Math.max(.1,inked);wt.drawImage(s,-size/2,-size/2,size,size);wt.restore();
   settle(1);snd.punch();inked=Math.max(.08,inked*.68);
 }
-/* ---------- sticker letters: three sheets, and every sticker on a sheet can be peeled off only once ---------- */
+/* ---------- sticker letters: three sheets in three styles; every sticker is drawn once, shown on its sheet, and can be peeled off only once ---------- */
 const SUPPLY='AAAABBCCDDEEEEFFGGHHIIIJKLLMMNNÑOOOOPPQRRSSSTTUUUVWXYYZ0123456789!!??♥♥&.,';
-const SHEETS={};['black','red','blue'].forEach(c=>{SHEETS[c]={};for(const ch of SUPPLY)SHEETS[c][ch]=(SHEETS[c][ch]||0)+1;});
-let sheetOf='black',lifted=null;
+const INKS={glitter:['#ff4fa3','#f2b705','#19c3b3','#8a4fff','#ff7a1a','#3d8bff'],bubble:['#ff5d8f','#ffb400','#35c46a','#3aa0ff','#b56bff','#ff7043'],tiles:['#d21f1b','#1f3f94','#f7d117','#1f9d55','#111111','#ff4fa3']};
+function shade(hex,f){const n=parseInt(hex.slice(1),16),c=v=>Math.max(0,Math.min(255,Math.round(v*f)));return 'rgb('+c(n>>16)+','+c((n>>8)&255)+','+c(n&255)+')';}
+function stickerArt(style,ch,n){
+  const k=2,h=66,col=INKS[style][n%INKS[style].length],cv=document.createElement('canvas'),m=cv.getContext('2d');
+  const F=style==='bubble'?'700 50px Fredoka,"Arial Rounded MT Bold","Comic Sans MS",sans-serif':style==='tiles'?'38px Bungee,"Arial Black",Impact,sans-serif':'46px Bungee,"Arial Black",Impact,sans-serif';
+  m.font=F;const w=style==='tiles'?58:Math.ceil(m.measureText(ch).width)+22;
+  cv.width=w*k;cv.height=h*k;cv._w=w;cv._h=h;
+  const x=cv.getContext('2d');x.scale(k,k);x.font=F;x.textAlign='center';x.textBaseline='middle';x.lineJoin='round';const cx=w/2,cy=h/2+2;
+  if(style==='tiles'){
+    const r=(a,b,c,d,q)=>{x.beginPath();x.roundRect(a,b,c,d,q);};
+    r(3,5,w-6,h-10,12);x.fillStyle='#ffffff';x.fill();
+    r(7,9,w-14,h-18,9);x.fillStyle=col;x.fill();
+    x.save();r(7,9,w-14,h-18,9);x.clip();x.fillStyle='rgba(17,17,17,.18)';x.fillRect(0,h-16,w,10);x.fillStyle='rgba(255,255,255,.22)';x.fillRect(0,9,w,7);x.restore();
+    x.fillStyle=col==='#f7d117'?'#111111':'#ffffff';x.fillText(ch,cx,cy);
+    return cv;
+  }
+  /* the white rim is the sticker's own backing, so a letter stays readable on any picture */
+  x.strokeStyle='#ffffff';x.lineWidth=13;x.strokeText(ch,cx,cy);
+  x.strokeStyle=shade(col,.55);x.lineWidth=style==='bubble'?6:4;x.strokeText(ch,cx,cy);
+  x.fillStyle=col;x.fillText(ch,cx,cy);
+  /* everything after this only lands on the coloured letter itself */
+  const t=document.createElement('canvas');t.width=cv.width;t.height=cv.height;const y=t.getContext('2d');y.scale(k,k);y.font=F;y.textAlign='center';y.textBaseline='middle';y.fillStyle='#000';y.fillText(ch,cx,cy);
+  y.globalCompositeOperation='source-in';
+  if(style==='glitter'){
+    y.fillStyle=col;y.fillRect(0,0,w,h);y.globalCompositeOperation='source-atop';
+    const P=['#ffffff','#fff6c2',shade(col,1.35),shade(col,.6),'#ffd6f0','#c9fff6'];
+    for(let i=0;i<w*9;i++){y.globalAlpha=.35+Math.random()*.65;y.fillStyle=P[Math.floor(Math.random()*P.length)];const s=.8+Math.random()*2.2;y.fillRect(Math.random()*w,Math.random()*h,s,s);}
+    y.globalAlpha=.9;y.fillStyle='#ffffff';for(let i=0;i<3;i++){const sx=8+Math.random()*(w-16),sy=14+Math.random()*(h-28);y.fillRect(sx-4,sy-.7,8,1.4);y.fillRect(sx-.7,sy-4,1.4,8);}
+  }else{
+    const g=y.createLinearGradient(0,10,0,h-8);g.addColorStop(0,shade(col,1.25));g.addColorStop(.6,col);g.addColorStop(1,shade(col,.75));
+    y.fillStyle=g;y.fillRect(0,0,w,h);y.globalCompositeOperation='source-atop';
+    y.fillStyle='rgba(255,255,255,.6)';y.beginPath();y.ellipse(cx-w*.12,h*.3,w*.22,6,-.35,0,7);y.fill();
+  }
+  x.setTransform(1,0,0,1,0,0);x.drawImage(t,0,0);
+  return cv;
+}
+const SHEETS={};
+let sheetOf='glitter',lifted=null;
 function drawSheet(){
-  const box=$('stickers');box.textContent='';box.style.setProperty('--ink',COLORS[sheetOf]);
-  [...new Set(SUPPLY)].forEach(ch=>{
-    const n=SHEETS[sheetOf][ch],b=document.createElement('button');b.type='button';b.textContent=ch;b.disabled=!n;
-    b.setAttribute('aria-label',n?ch+', '+n+' left':ch+', none left');b.setAttribute('aria-pressed',String(lifted===ch));
-    const c=document.createElement('small');c.textContent=n;c.setAttribute('aria-hidden','true');b.appendChild(c);
-    b.addEventListener('click',()=>{audio();lifted=lifted===ch?null:ch;noise(.04,'highpass',3000,.12);drawSheet();});
+  if(!SHEETS[sheetOf])SHEETS[sheetOf]=[...SUPPLY].map((ch,n)=>{const cv=stickerArt(sheetOf,ch,n);return {ch:ch,cv:cv,url:cv.toDataURL(),used:false};});
+  const box=$('stickers');box.textContent='';
+  SHEETS[sheetOf].forEach(st=>{
+    const b=document.createElement('button');b.type='button';b.disabled=st.used;
+    b.setAttribute('aria-label',st.used?st.ch+', already used':st.ch);b.setAttribute('aria-pressed',String(lifted===st));
+    const im=document.createElement('img');im.src=st.url;im.alt='';b.appendChild(im);
+    b.addEventListener('click',()=>{audio();lifted=lifted===st?null:st;noise(.04,'highpass',3000,.12);drawSheet();});
     box.appendChild(b);
   });
 }
 document.querySelectorAll('[data-sheet]').forEach(b=>b.addEventListener('click',()=>{audio();sheetOf=b.dataset.sheet;lifted=null;snd.tick();document.querySelectorAll('[data-sheet]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawSheet();}));
-drawSheet();
+/* the stickers are drawn with the page's fonts, so wait for those before drawing any */
+(document.fonts?Promise.all([document.fonts.load('46px Bungee'),document.fonts.load('700 50px Fredoka')]).catch(()=>{}):Promise.resolve()).then(drawSheet);
 function stickLetter(e){
-  if(!lifted||!SHEETS[sheetOf][lifted]){snd.tick();return;}
-  const F='900 46px "Arial Black",Impact,sans-serif',m=document.createElement('canvas').getContext('2d');m.font=F;
-  const w=Math.ceil(m.measureText(lifted).width)+18,h=66,k=2,cv=document.createElement('canvas');cv.width=w*k;cv.height=h*k;
-  const x=cv.getContext('2d');x.scale(k,k);x.font=F;x.textAlign='center';x.textBaseline='middle';x.lineJoin='round';
-  /* the white rim is the sticker's own backing, so a letter stays readable on any picture */
-  x.strokeStyle='#ffffff';x.lineWidth=11;x.strokeText(lifted,w/2,h/2+2);x.fillStyle=COLORS[sheetOf];x.fillText(lifted,w/2,h/2+2);
-  const a=app.getBoundingClientRect(),el=addPiece(cv,w,h,e.clientX-a.left-w/2,e.clientY-a.top-h/2);
+  if(!lifted||lifted.used){snd.tick();return;}
+  const cv=lifted.cv,w=cv._w,h=cv._h,a=app.getBoundingClientRect(),el=addPiece(cv,w,h,e.clientX-a.left-w/2,e.clientY-a.top-h/2);
   el.dataset.peel='1';el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
-  SHEETS[sheetOf][lifted]--;tell('The letter '+lifted+', stuck down.');lifted=null;drawSheet();snd.glue();
+  lifted.used=true;tell('The letter '+lifted.ch+', stuck down.');lifted=null;drawSheet();snd.glue();
 }
 /* ---------- sticky tape: pull a strip across the card; it sticks at once and becomes a piece like any other ---------- */
 const ROLLS={clear:'rgba(244,236,205,.55)',yellow:'rgba(247,209,23,.8)',red:'rgba(210,31,27,.8)',blue:'rgba(31,63,148,.8)',stripes:'rgba(251,250,245,.9)',dots:'rgba(247,209,23,.9)',grid:'rgba(251,250,245,.92)'},TAPE_W=34;
