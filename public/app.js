@@ -397,7 +397,7 @@ const toolBtns=document.querySelectorAll('[data-tool]');
 toolBtns.forEach(b=>b.addEventListener('click',()=>{
   audio();tool=b.dataset.tool;
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
-  marks.classList.toggle('on',PENS.includes(tool)||tool==='tape');$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
+  marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp');$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
   app.classList.toggle('sounding',tool==='sound');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
@@ -420,6 +420,31 @@ function seg(a,b){
   const w=tool==='white';
   wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=(w?14:4.5)*ku*tip;wt.strokeStyle=w?'#ffffff':COLORS[penColor];
   wt.beginPath();wt.moveTo(a[0],a[1]);wt.lineTo(b[0],b[1]);wt.stroke();
+}
+/* ---------- rubber stamps: each press prints fainter until the stamp goes back on an ink pad ---------- */
+const STAMPS={
+  star(x){x.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?20:48;x.lineTo(Math.cos(a)*r,Math.sin(a)*r);}x.closePath();x.fill();},
+  heart(x){x.beginPath();x.moveTo(0,44);x.bezierCurveTo(-70,-4,-34,-58,0,-22);x.bezierCurveTo(34,-58,70,-4,0,44);x.fill();},
+  face(x){x.beginPath();x.arc(0,0,46,0,7);x.fill();x.globalCompositeOperation='destination-out';
+    x.beginPath();x.arc(-16,-12,6,0,7);x.arc(16,-12,6,0,7);x.fill();x.lineWidth=6;x.lineCap='round';x.beginPath();x.arc(0,2,26,.2*Math.PI,.8*Math.PI);x.stroke();x.globalCompositeOperation='source-over';},
+  flower(x){for(let i=0;i<6;i++){x.beginPath();x.ellipse(Math.cos(i*Math.PI/3)*28,Math.sin(i*Math.PI/3)*28,19,13,i*Math.PI/3,0,7);x.fill();}
+    x.globalCompositeOperation='destination-out';x.beginPath();x.arc(0,0,10,0,7);x.fill();x.globalCompositeOperation='source-over';x.beginPath();x.arc(0,0,6,0,7);x.fill();},
+  sun(x){x.beginPath();x.arc(0,0,24,0,7);x.fill();x.lineWidth=7;x.lineCap='round';for(let i=0;i<10;i++){const a=i*Math.PI/5;x.beginPath();x.moveTo(Math.cos(a)*32,Math.sin(a)*32);x.lineTo(Math.cos(a)*47,Math.sin(a)*47);x.stroke();}},
+  cake(x){x.fillRect(-40,2,80,40);x.fillRect(-30,-22,60,20);x.fillRect(-3,-42,6,18);x.beginPath();x.ellipse(0,-48,5,8,0,0,7);x.fill();
+    x.globalCompositeOperation='destination-out';x.lineWidth=5;x.beginPath();x.moveTo(-40,18);for(let i=0;i<8;i++)x.quadraticCurveTo(-35+i*10,i%2?12:26,-30+i*10,18);x.stroke();x.globalCompositeOperation='source-over';}
+};
+let stamp='star',pad='black',inked=1;
+document.querySelectorAll('[data-stamp]').forEach(b=>b.addEventListener('click',()=>{audio();stamp=b.dataset.stamp;inked=1;snd.tick();document.querySelectorAll('[data-stamp]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
+document.querySelectorAll('[data-pad]').forEach(b=>b.addEventListener('click',()=>{audio();pad=b.dataset.pad;inked=1;noise(.06,'lowpass',500,.3);document.querySelectorAll('[data-pad]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));tell('Inked.');}));
+function press1(p){
+  const s=document.createElement('canvas');s.width=s.height=220;const x=s.getContext('2d');
+  x.translate(110,110);x.scale(2,2);x.fillStyle=x.strokeStyle=COLORS[pad];STAMPS[stamp](x);
+  /* rubber never prints evenly: speckle the print, more as the ink runs out */
+  x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='destination-out';
+  for(let i=0,n=260+(1-inked)*1400;i<n;i++){x.globalAlpha=.3+Math.random()*.7;x.fillRect(Math.random()*220,Math.random()*220,1+Math.random()*2.5,1+Math.random()*2.5);}
+  const size=84*ku;
+  wt.save();wt.translate(p[0],p[1]);wt.rotate((Math.random()-.5)*.2);wt.globalAlpha=Math.max(.1,inked);wt.drawImage(s,-size/2,-size/2,size,size);wt.restore();
+  settle(1);snd.punch();inked=Math.max(.08,inked*.68);
 }
 /* ---------- sticky tape: pull a strip across the card; it sticks at once and becomes a piece like any other ---------- */
 const ROLLS={clear:'rgba(244,236,205,.55)',yellow:'rgba(247,209,23,.8)',red:'rgba(210,31,27,.8)',blue:'rgba(31,63,148,.8)',stripes:'rgba(251,250,245,.9)',dots:'rgba(247,209,23,.9)',grid:'rgba(251,250,245,.92)'},TAPE_W=34;
@@ -487,6 +512,7 @@ function stick(){
 }
 marks.addEventListener('pointerdown',e=>{
   audio();try{marks.setPointerCapture(e.pointerId);}catch(_){}
+  if(tool==='stamp'){ku=MW/marks.getBoundingClientRect().width;press1(mpos(e));$('cardhint').hidden=true;e.preventDefault();return;}
   if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0};$('cardhint').hidden=true;e.preventDefault();return;}
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;e.preventDefault();
 });

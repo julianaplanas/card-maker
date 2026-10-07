@@ -57,7 +57,7 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .piece.wet{filter:drop-shadow(0 0 5px var(--yellow)) drop-shadow(0 0 2px var(--yellow)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}
 .piece.dry{filter:none}
 #tapeopts .y{background:var(--yellow)}
-#tapeopts [aria-pressed=true]{outline:4px solid var(--line);outline-offset:-8px}
+#stampopts [aria-pressed=true],#tapeopts [aria-pressed=true]{outline:4px solid var(--line);outline-offset:-8px}
 .piece.stuck{animation:stuck .25s}
 @keyframes stuck{0%,100%{translate:0 0}30%{translate:3px 0}70%{translate:-3px 0}}
 .goo{position:absolute;pointer-events:none;z-index:6}
@@ -146,10 +146,14 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
   #cardcell .cardhead{grid-area:head}
   #card{grid-area:card;justify-self:center}
   #envbar{grid-area:env}
-  #penopts,#tapeopts{grid-area:opts}
+  #penopts,#tapeopts,#stampopts{grid-area:opts}
   #sndopts{grid-area:snd}
   #cardtools{grid-area:tools;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:56px;align-content:start;align-self:start;margin-top:0}
   #cutbar button,#cardtools button{flex:0 0 auto;min-height:52px}
 }
 @media (max-width:859px){#app.nosheet #table{display:none}}
 @media (prefers-reduced-motion:reduce){#bin.shake,.cv-piece,.cv-piece.cv-wig,.cv-piece img,.piece.loud{animation:none}.cv-piece img,.piece.loud{filter:drop-shadow(0 0 6px var(--blue)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}}
+/* an ink pad keeps its colour while it is the one in use */
+#stampopts .k[aria-pressed=true]{background:#3a3a3a;outline-color:var(--on-dark)}
+#stampopts .r[aria-pressed=true]{background:var(--red);outline-color:var(--on-dark)}
+#stampopts .b[aria-pressed=true]{background:var(--blue);outline-color:var(--on-dark)}
