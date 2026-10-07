@@ -479,7 +479,9 @@ function carryTool(el,e,fresh){
       if(holding===it)putDown();
       el.remove();it.el=null;it.out+=Date.now()-it.t0;it.t0=null;it.btn.classList.remove('out');snd.tick();tell(it.name+', back in its box.');return;
     }
-    it.leakAt=Date.now();if(fresh)activate(it);
+    it.leakAt=Date.now();
+    /* carried out of its box, it is in your hand; carried off the card afterwards, it is put down and your hand is empty */
+    if(fresh)activate(it);else if(holding===it&&!inside(el,card,0)){putDown();snd.tick();}
   };
   el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
@@ -496,6 +498,11 @@ setInterval(()=>{
     spill(c,cx+Math.sin(r)*d,cy-Math.cos(r)*d,size);
   });
 },3000);
+/* touching the bare table puts down whatever you hold, so your empty hand can move and peel things again */
+app.addEventListener('pointerdown',e=>{
+  if(!holding||holding.machine||e.target.closest('#card,#marks,.loose,.piece,#side,#sheet,#cutbar,#shelf,#mail,button,label'))return;
+  putDown();snd.tick();tell('Put down. Your hand is empty.');
+});
 /* the boxes on the shelf: tap one to open it on the table, tap again to close it */
 const KITS={pens:'pencase',glitter:'glitcase',white:'whitecase',tape:'tapeopts',stamps:'stampopts',stickers:'letteropts',pins:'pinopts',recorder:'sndopts',copier:null};
 let padOpen=0,padSince=null;
@@ -912,7 +919,11 @@ function stick(){
   snd.glue();tell('A strip of tape, stuck down.');
 }
 marks.addEventListener('pointerdown',e=>{
-  audio();try{marks.setPointerCapture(e.pointerId);}catch(_){}
+  audio();
+  /* a tool lying on the card is still a thing you can take hold of, even while you are drawing */
+  const lying=[...layer.querySelectorAll('.loose')].sort((p,q)=>(+q.style.zIndex||0)-(+p.style.zIndex||0)).find(el=>{const r=el.getBoundingClientRect();return e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom;});
+  if(lying){e.preventDefault();carryTool(lying,e,false);return;}
+  try{marks.setPointerCapture(e.pointerId);}catch(_){}
   follow(e);
   if(tool==='letter'){stickLetter(e);$('cardhint').hidden=true;e.preventDefault();return;}
   if(tool==='stamp'){ku=MW/marks.getBoundingClientRect().width;press1(mpos(e));$('cardhint').hidden=true;e.preventDefault();return;}
