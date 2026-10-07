@@ -258,3 +258,12 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 /* the picture of a tool never takes the press itself: the press always goes to the tool */
 .kit button>*,#pencase button>*{pointer-events:none}
 .kit button,#pencase button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:grab}
+/* a sheet is always the same size, whichever side of the card is showing, so what you cut from it is too */
+@media (min-width:1100px){
+  #table>#sheet{width:388px;max-width:none;justify-self:start}
+  #table{grid-template-columns:auto 132px;justify-content:start}
+  #app{grid-template-columns:minmax(548px,1.25fr) auto minmax(0,1fr)}
+  #app:has(#card.open),#app:has(#card.env){grid-template-columns:minmax(548px,1fr) auto 0}
+  #cardcell:has(#card.open){width:min(800px,calc(100vw - 624px))}
+  #cardcell:has(#card.env){width:min(680px,calc(100vw - 624px))}
+}
