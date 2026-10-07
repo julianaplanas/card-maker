@@ -57,6 +57,8 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .piece.wet{filter:drop-shadow(0 0 5px var(--yellow)) drop-shadow(0 0 2px var(--yellow)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}
 .piece.dry{filter:none}
 .goo{position:absolute;pointer-events:none;z-index:6}
+#turn{position:absolute;z-index:2147482000;width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:var(--yellow);color:var(--line);border:3px solid var(--line);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:grab;touch-action:none}
+#turn[hidden]{display:none}
 .ink{position:absolute;pointer-events:none;touch-action:none;z-index:9000}
 #base,#baseopen,#baseenv{z-index:7}
 .cardhead{display:flex;align-items:center;justify-content:space-between;align-self:stretch;gap:8px;margin-bottom:10px;flex-wrap:wrap}

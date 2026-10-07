@@ -274,12 +274,13 @@ function drag(el){
   el.addEventListener('pointerdown',e=>{
     audio();
     if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
+    pick(el);
     sx=el.offsetLeft;sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
     held=true;try{el.setPointerCapture(e.pointerId);}catch(_){}
     ox=e.clientX-el.offsetLeft;oy=e.clientY-el.offsetTop;
     el.classList.add('held');el.style.zIndex=String(++z);e.preventDefault();
   });
-  el.addEventListener('pointermove',e=>{if(!held)return;el.style.left=(e.clientX-ox)+'px';el.style.top=(e.clientY-oy)+'px';});
+  el.addEventListener('pointermove',e=>{if(!held)return;el.style.left=(e.clientX-ox)+'px';el.style.top=(e.clientY-oy)+'px';if(picked===el)placeTurn();});
   const up=()=>{
     if(!held)return;held=false;el.classList.remove('held');
     const moved=Math.hypot(el.offsetLeft-sx,el.offsetTop-sy)>12,left=wasGlued&&moved;
@@ -299,6 +300,51 @@ function drag(el){
 
 /* ---------- trash ---------- */
 const DRY=8000;
+/* ---------- turning a piece: tap it, then drag the round handle that appears at its corner ---------- */
+let picked=null;
+const turn=document.createElement('button');
+turn.type='button';turn.id='turn';turn.hidden=true;turn.setAttribute('aria-label','Turn this piece. Drag around it, or use the left and right arrow keys.');
+turn.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 3v5h-5"/></svg>';
+layer.appendChild(turn);
+function angleOf(el){return parseFloat(el.style.getPropertyValue('--r'))||0;}
+function placeTurn(){
+  if(!picked||!picked.isConnected||picked.hidden){turn.hidden=true;return;}
+  const w=parseFloat(picked.style.width),h=parseFloat(picked.style.height),cx=picked.offsetLeft+w/2,cy=picked.offsetTop+h/2;
+  const a=angleOf(picked)*Math.PI/180+Math.atan2(-h/2,w/2),d=Math.hypot(w,h)/2+26;
+  turn.style.left=(cx+Math.cos(a)*d-22)+'px';turn.style.top=(cy+Math.sin(a)*d-22)+'px';turn.hidden=false;
+}
+function pick(el){picked=el;placeTurn();}
+/* turning a glued piece is moving it: the old glue stays behind and the piece is stuck down again, wet */
+function turned(el,wasGlued,wasDry){
+  if(!wasGlued)return;
+  residue(el.offsetLeft,el.offsetTop,el,wasDry,el.style.zIndex);unglue(el);if(wasDry)snd.rip();
+  if(inside(el,card,0)){
+    el.dataset.glued='1';el.dataset.face=face;el.classList.add('wet');snd.glue();
+    el._t=setTimeout(()=>{el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');},DRY);
+  }
+}
+(function(){
+  let held=false,a0=0,r0=0,cx=0,cy=0,glued=false,dry=false,ticks=0;
+  const ang=e=>Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI;
+  turn.addEventListener('pointerdown',e=>{
+    if(!picked)return;audio();held=true;try{turn.setPointerCapture(e.pointerId);}catch(_){}
+    const r=picked.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;
+    a0=ang(e);r0=angleOf(picked);glued=!!picked.dataset.glued;dry=!!picked.dataset.dry;ticks=0;e.preventDefault();
+  });
+  turn.addEventListener('pointermove',e=>{
+    if(!held||!picked)return;
+    const r=r0+(ang(e)-a0);picked.style.setProperty('--r',r.toFixed(1)+'deg');placeTurn();
+    const t=Math.round(r/12);if(t!==ticks){ticks=t;snd.tick();}
+  });
+  const up=()=>{if(!held)return;held=false;if(picked&&Math.abs(angleOf(picked)-r0)>1)turned(picked,glued,dry);};
+  turn.addEventListener('pointerup',up);turn.addEventListener('pointercancel',up);
+  turn.addEventListener('keydown',e=>{
+    if(!picked||(e.key!=='ArrowLeft'&&e.key!=='ArrowRight'))return;e.preventDefault();
+    const g=!!picked.dataset.glued,d=!!picked.dataset.dry;
+    picked.style.setProperty('--r',(angleOf(picked)+(e.key==='ArrowLeft'?-5:5)).toFixed(1)+'deg');placeTurn();snd.tick();turned(picked,g,d);
+  });
+  document.addEventListener('pointerdown',e=>{if(picked&&e.target!==turn&&!turn.contains(e.target)&&e.target!==picked)pick(null);});
+})();
 function unglue(el){clearTimeout(el._t);delete el.dataset.glued;delete el.dataset.face;delete el.dataset.dry;el.classList.remove('wet','dry');}
 function residue(x,y,el,dry,zi){
   const w=parseFloat(el.style.width)||40,h=parseFloat(el.style.height)||40,d=document.createElement('div'),r=()=>30+Math.round(Math.random()*40);
@@ -397,6 +443,7 @@ const mend=()=>{if(!mp)return;mp=null;settle();};
 marks.addEventListener('pointerup',mend);marks.addEventListener('pointercancel',mend);
 
 function toTrash(el){
+  if(picked===el)pick(null);
   unglue(el);el.remove();stack.push(el);count.textContent=String(stack.length);
   snd.trash();bin.classList.remove('shake');void bin.offsetWidth;bin.classList.add('shake');
   tell('In the trash. Double-click the trash to take the last thing back out.');
@@ -423,7 +470,7 @@ document.addEventListener('pointerdown',e=>{if(!bin.contains(e.target))restore=f
 const BASES={front:baseF,open:baseO,env:baseE};
 const faceBtns=document.querySelectorAll('[data-face]');
 function setFace(f){
-  face=f;
+  pick(null);face=f;
   card.classList.toggle('open',f==='open');card.classList.toggle('env',f==='env');
   MW=f==='front'?600:1200;wet.width=MW;marks.width=MW;
   Object.keys(BASES).forEach(k=>{BASES[k].hidden=k!==f;});mk=BASES[f].getContext('2d');
@@ -608,6 +655,7 @@ $('copy').addEventListener('click',()=>{
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,pick);else pick();
 });
 function wipe(faces){
+  pick(null);
   layer.querySelectorAll('.piece,.goo').forEach(p=>{if(faces.includes(p.dataset.face)){clearTimeout(p._t);p.remove();}});
   faces.forEach(f=>{const b=BASES[f];b.getContext('2d').clearRect(0,0,b.width,b.height);});
   wt.clearRect(0,0,MW,MH);
