@@ -11,7 +11,7 @@ It follows two rules:
 
 - **Boxes of material**: Magazines, Paintings and Your pictures. Tap a box to take a random sheet out; drag the sheet back onto a box, or into the trash. A sheet keeps its holes.
 - **Cutting a sheet**: scissors, tear, hole punch, and star and heart cutters.
-- **The card**: a front and an inside. A pencil case of fine markers, fat markers and crayons in eight colors, plus glitter glue and white-out. Glue dries after 8 seconds.
+- **The card**: a front and an inside. A pencil case of fine markers, fat markers and crayons in eight colors, plus tubes of glitter glue in six colors and white-out as a pen, a bottle and a roller. Glue dries after 8 seconds.
 - **Turning a piece**: tap a piece and a round yellow handle appears at its corner; drag the handle to turn it (or use the left and right arrow keys). Turning a glued piece leaves glue behind, like moving it does.
 - **Tape**: pull a strip across the card, plain or printed. It sticks at once and holds down whatever is under it. Peeling it off leaves no glue but tears the paper a little.
 - **Stamps**: six rubber stamps and three ink pads. Each press prints fainter; picking a pad (or a stamp) inks it again.

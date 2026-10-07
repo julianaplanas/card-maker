@@ -206,3 +206,14 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 #pinbox button.out{cursor:default}
 #pinbox button.out canvas{visibility:hidden}
 #pinfly{position:absolute;width:40px;height:40px;pointer-events:none;z-index:2147483000;filter:drop-shadow(4px 7px 0 rgba(17,17,17,.3))}
+/* trays of real-looking tools: the one in your hand is lifted */
+.kit{flex:1 1 100%;grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:16px 12px 10px;border:3px solid var(--paper);background:#b9c4c9;background-image:linear-gradient(rgba(255,255,255,.35),transparent 22%)}
+.tools .kit button{flex:0 0 auto;min-height:0;padding:0;background:none;line-height:0;outline:none;transition:translate .12s}
+.kit button svg,.kit button canvas{display:block;filter:drop-shadow(2px 3px 0 rgba(0,0,0,.4))}
+.tools .kit button[aria-pressed=true]{translate:0 -12px;background:none;outline:none}
+.kit button:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+#stamprack{background-color:#d8c7a3}
+#padrow{background-color:#d8c7a3;margin-top:-3px}
+#rolls{background-color:#e4dccb}
+#stampopts,#tapeopts{display:block}
+#stampopts .kit button[aria-pressed=true],#tapeopts .kit button[aria-pressed=true]{outline:none;background:none}
