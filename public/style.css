@@ -58,6 +58,8 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .piece.dry{filter:none}
 #tapeopts .y{background:var(--yellow)}
 #tapeopts [aria-pressed=true]{outline:4px solid var(--line);outline-offset:-8px}
+.piece.stuck{animation:stuck .25s}
+@keyframes stuck{0%,100%{translate:0 0}30%{translate:3px 0}70%{translate:-3px 0}}
 .goo{position:absolute;pointer-events:none;z-index:6}
 #turn{position:absolute;z-index:2147482000;width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:var(--yellow);color:var(--line);border:3px solid var(--line);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:grab;touch-action:none}
 #turn[hidden]{display:none}

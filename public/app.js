@@ -274,12 +274,13 @@ function inside(el,target,pad){
   return cx>t.left-pad&&cx<t.right+pad&&cy>t.top-pad&&cy<t.bottom+pad;
 }
 function drag(el){
-  let held=false,ox=0,oy=0,sx=0,sy=0,sz='6',wasGlued=false,wasDry=false;
+  let held=false,ox=0,oy=0,sx=0,sy=0,sr=0,sz='6',wasGlued=false,wasDry=false;
   el.addEventListener('pointerdown',e=>{
     audio();
     if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
+    if(pinned(el)){el.classList.remove('stuck');void el.offsetWidth;el.classList.add('stuck');snd.tick();tell('Held down by tape.');e.preventDefault();return;}
     pick(el);
-    sx=el.offsetLeft;sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
+    sx=el.offsetLeft;sr=angleOf(el);sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
     held=true;try{el.setPointerCapture(e.pointerId);}catch(_){}
     ox=e.clientX-el.offsetLeft;oy=e.clientY-el.offsetTop;
     el.classList.add('held');el.style.zIndex=String(++z);e.preventDefault();
@@ -289,15 +290,18 @@ function drag(el){
     if(!held)return;held=false;el.classList.remove('held');
     const moved=Math.hypot(el.offsetLeft-sx,el.offsetTop-sy)>12,left=wasGlued&&moved;
     if(!moved&&el._snd)hear(el._snd,el._tape);
-    if(left){residue(sx,sy,el,wasDry,sz);unglue(el);if(wasDry)snd.rip();}
+    if(left&&el.dataset.sticky){tear(el,sx,sy,sr);unglue(el);snd.rip();}
+    else if(left){residue(sx,sy,el,wasDry,sz);unglue(el);if(wasDry)snd.rip();}
     if(inside(el,bin,10)){toTrash(el);return;}
     if(inside(el,card,0)){
-      if(!el.dataset.glued){
+      if(!el.dataset.glued&&el.dataset.sticky){el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');snd.glue();tell(left?'Peeled off and stuck down again. It tore the paper a little.':'Stuck down.');}
+      else if(!el.dataset.glued){
         el.dataset.glued='1';el.dataset.face=face;el.classList.add('wet');snd.glue();$('cardhint').hidden=true;
         tell(left?'Moved. Some glue stayed where it was.':'Glued. The glue dries in 8 seconds.');
         el._t=setTimeout(()=>{el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');},DRY);
       }
-    }else if(left){tell(wasDry?'Ripped off. A patch of dried glue stayed on the card.':'Peeled off. A smear of glue stayed on the card.');}
+    }else if(left&&el.dataset.sticky){tell('Peeled off. It tore the paper a little.');}
+    else if(left){tell(wasDry?'Ripped off. A patch of dried glue stayed on the card.':'Peeled off. A smear of glue stayed on the card.');}
   };
   el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
@@ -319,8 +323,9 @@ function placeTurn(){
 }
 function pick(el){picked=el;placeTurn();}
 /* turning a glued piece is moving it: the old glue stays behind and the piece is stuck down again, wet */
-function turned(el,wasGlued,wasDry){
+function turned(el,wasGlued,wasDry,was){
   if(!wasGlued)return;
+  if(el.dataset.sticky){tear(el,el.offsetLeft,el.offsetTop,was);snd.rip();return;}
   residue(el.offsetLeft,el.offsetTop,el,wasDry,el.style.zIndex);unglue(el);if(wasDry)snd.rip();
   if(inside(el,card,0)){
     el.dataset.glued='1';el.dataset.face=face;el.classList.add('wet');snd.glue();
@@ -340,12 +345,13 @@ function turned(el,wasGlued,wasDry){
     const r=r0+(ang(e)-a0);picked.style.setProperty('--r',r.toFixed(1)+'deg');placeTurn();
     const t=Math.round(r/12);if(t!==ticks){ticks=t;snd.tick();}
   });
-  const up=()=>{if(!held)return;held=false;if(picked&&Math.abs(angleOf(picked)-r0)>1)turned(picked,glued,dry);};
+  const up=()=>{if(!held)return;held=false;if(picked&&Math.abs(angleOf(picked)-r0)>1)turned(picked,glued,dry,r0);};
   turn.addEventListener('pointerup',up);turn.addEventListener('pointercancel',up);
   turn.addEventListener('keydown',e=>{
     if(!picked||(e.key!=='ArrowLeft'&&e.key!=='ArrowRight'))return;e.preventDefault();
     const g=!!picked.dataset.glued,d=!!picked.dataset.dry;
-    picked.style.setProperty('--r',(angleOf(picked)+(e.key==='ArrowLeft'?-5:5)).toFixed(1)+'deg');placeTurn();snd.tick();turned(picked,g,d);
+    const was=angleOf(picked);
+    picked.style.setProperty('--r',(was+(e.key==='ArrowLeft'?-5:5)).toFixed(1)+'deg');placeTurn();snd.tick();turned(picked,g,d,was);
   });
   document.addEventListener('pointerdown',e=>{if(picked&&e.target!==turn&&!turn.contains(e.target)&&e.target!==picked)pick(null);});
 })();
@@ -415,7 +421,44 @@ function seg(a,b){
   wt.beginPath();wt.moveTo(a[0],a[1]);wt.lineTo(b[0],b[1]);wt.stroke();
 }
 /* ---------- sticky tape: pull a strip across the card; it sticks at once and becomes a piece like any other ---------- */
-const ROLLS={clear:'rgba(244,236,205,.55)',yellow:'rgba(247,209,23,.8)',red:'rgba(210,31,27,.8)',blue:'rgba(31,63,148,.8)'},TAPE_W=34;
+const ROLLS={clear:'rgba(244,236,205,.55)',yellow:'rgba(247,209,23,.8)',red:'rgba(210,31,27,.8)',blue:'rgba(31,63,148,.8)',stripes:'rgba(251,250,245,.9)',dots:'rgba(247,209,23,.9)',grid:'rgba(251,250,245,.92)'},TAPE_W=34;
+/* the printed rolls: drawn over the tape's own colour, x runs along the strip */
+const PRINTS={
+  stripes(x,L,H){x.strokeStyle='rgba(210,31,27,.9)';x.lineWidth=6;for(let i=-H;i<L+H;i+=16){x.beginPath();x.moveTo(i,H+2);x.lineTo(i+H,-2);x.stroke();}},
+  dots(x,L,H){x.fillStyle='rgba(31,63,148,.92)';for(let i=9,n=0;i<L;i+=13,n++){x.beginPath();x.arc(i,n%2?H*.3:H*.7,4,0,7);x.fill();}},
+  grid(x,L,H){const C=['#d21f1b','#1f3f94','#f7d117'];let i=6,n=0;x.fillStyle='#111111';x.fillRect(0,H*.55,L,3);
+    while(i<L){const w=14+((n*37)%23);if(n%3!==1){x.fillStyle=C[n%3];x.fillRect(i,n%2?H*.55+3:0,w,n%2?H*.45-3:H*.55);}x.fillStyle='#111111';x.fillRect(i+w,0,3,H);i+=w+3;n++;}}
+};
+/* is this piece under a strip of tape? Walk along the middle of every strip above it and see whether it crosses the piece's paper. */
+function pinned(el){
+  const zi=+el.style.zIndex||0,w=parseFloat(el.style.width),h=parseFloat(el.style.height);if(!el.dataset.glued||!w||!h)return false;
+  const cx=el.offsetLeft+w/2,cy=el.offsetTop+h/2,rot=-angleOf(el)*Math.PI/180,pc=el.getContext('2d');
+  return [...layer.querySelectorAll('.piece[data-sticky][data-glued]')].some(t=>{
+    if(t===el||t.hidden||(+t.style.zIndex||0)<zi)return false;
+    const L=parseFloat(t.style.width),tx=t.offsetLeft+L/2,ty=t.offsetTop+parseFloat(t.style.height)/2,a=angleOf(t)*Math.PI/180;
+    for(let d=-L/2+4;d<=L/2-4;d+=6){
+      const px=tx+Math.cos(a)*d-cx,py=ty+Math.sin(a)*d-cy,lx=px*Math.cos(rot)-py*Math.sin(rot)+w/2,ly=px*Math.sin(rot)+py*Math.cos(rot)+h/2;
+      if(lx<0||ly<0||lx>=w||ly>=h)continue;
+      try{if(pc.getImageData(Math.floor(lx*el.width/w),Math.floor(ly*el.height/h),1,1).data[3]>40)return true;}catch(_){return true;}
+    }
+    return false;
+  });
+}
+/* peeling tape takes a little of the paper's surface with it: pale ragged patches where the strip was, on whatever paper was on top there */
+function tear(el,x,y,deg){
+  const L=parseFloat(el.style.width),H=parseFloat(el.style.height),c=card.getBoundingClientRect(),a=app.getBoundingClientRect(),k=MW/c.width;
+  wt.save();wt.setTransform(1,0,0,1,0,0);wt.clearRect(0,0,MW,MH);
+  wt.scale(k,k);wt.translate(x+L/2-(c.left-a.left),y+H/2-(c.top-a.top));wt.rotate((deg||0)*Math.PI/180);
+  const n=Math.max(1,Math.round(L/70));
+  for(let i=0;i<n;i++){
+    const px=-L/2+L*(i+.2+Math.random()*.6)/n,pw=10+Math.random()*Math.min(34,L/n),ph=H*(.35+Math.random()*.4),py=(Math.random()-.5)*(H-ph);
+    wt.beginPath();
+    for(let j=0;j<10;j++){const t=j/10*Math.PI*2,r=.7+Math.random()*.5;wt[j?'lineTo':'moveTo'](px+Math.cos(t)*pw/2*r,py+Math.sin(t)*ph/2*r);}
+    wt.closePath();wt.fillStyle='#e9e2cf';wt.fill();wt.strokeStyle='rgba(17,17,17,.14)';wt.lineWidth=1;wt.stroke();
+  }
+  wt.restore();
+  const was=el.hidden;el.hidden=true;settle(1);el.hidden=was;
+}
 let roll='clear',pull=null;
 document.querySelectorAll('[data-roll]').forEach(b=>b.addEventListener('click',()=>{audio();roll=b.dataset.roll;snd.tick();document.querySelectorAll('[data-roll]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
 function pulling(e){
@@ -435,10 +478,10 @@ function stick(){
   x.lineTo(3,H);
   for(let i=5;i>=0;i--)x.lineTo((i%2?0:5)+Math.random()*2,H*i/6);
   x.closePath();x.fillStyle=ROLLS[roll];x.fill();
-  x.globalCompositeOperation='source-atop';x.fillStyle='rgba(255,255,255,.22)';x.fillRect(0,3,L,3);x.fillStyle='rgba(17,17,17,.08)';x.fillRect(0,H-4,L,4);
+  x.globalCompositeOperation='source-atop';if(PRINTS[roll])PRINTS[roll](x,L,H);x.fillStyle='rgba(255,255,255,.22)';x.fillRect(0,3,L,3);x.fillStyle='rgba(17,17,17,.08)';x.fillRect(0,H-4,L,4);
   const el=addPiece(cv,L,H,(t.x0+t.x1)/2-a.left-L/2,(t.y0+t.y1)/2-a.top-H/2);
   el.style.setProperty('--r',(Math.atan2(t.y1-t.y0,t.x1-t.x0)*180/Math.PI).toFixed(1)+'deg');
-  el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
+  el.dataset.sticky='1';el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
   snd.glue();tell('A strip of tape, stuck down.');
 }
 marks.addEventListener('pointerdown',e=>{
@@ -452,8 +495,8 @@ marks.addEventListener('pointermove',e=>{
   seg(mp,p);mp=p;mtrav+=d;if(mtrav>70){mtrav=0;snd.mark();}
 });
 /* When the pen lifts, the stroke sinks into the topmost paper under each part of it: pieces first (top to bottom), the card last. */
-function settle(){
-  const alpha=tool==='white'?.85:1;
+function settle(force){
+  const alpha=force||(tool==='white'?.85:1);
   const c=card.getBoundingClientRect(),a=app.getBoundingClientRect(),cl=c.left-a.left,ct=c.top-a.top,kx=c.width/MW,ky=c.height/MH;
   const pieces=[...layer.querySelectorAll('.piece')].filter(p=>{
     if(p.hidden)return false;const r=p.getBoundingClientRect();return r.right>c.left&&r.left<c.right&&r.bottom>c.top&&r.top<c.bottom;
