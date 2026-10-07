@@ -441,7 +441,17 @@ function lay(it,x,y){
   const im=document.createElement('img');im.src=it.src;im.alt='';im.draggable=false;el.appendChild(im);
   el.style.width=it.w+'px';el.style.height=it.h+'px';
   const long=it.h>it.w*1.6,R=Math.max(it.w,it.h);
-  if(x==null){x=t.left-a.left+R/2+10+Math.random()*Math.max(20,t.width-R-20);y=t.top-a.top+R/2+50+Math.random()*Math.max(20,t.height-R-70);}
+  if(x==null){
+    /* anywhere on the table that is not the card: to its left, or in the strip to its right */
+    const c=card.getBoundingClientRect(),right=a.right-c.right-R-30,onRight=right>60&&Math.random()<right/(right+t.width);
+    /* try not to land on an open box or on the sheet; if the table is that full, it lands wherever */
+    const busy=[...document.querySelectorAll('#side>.tools:not([hidden]),#sheet:not([hidden]),#cutbar:not([hidden])')].map(n=>n.getBoundingClientRect()).filter(r=>r.width);
+    for(let i=0;i<14;i++){
+      if(onRight||(i>6&&right>60)){x=c.right-a.left+R/2+16+Math.random()*right;y=c.top-a.top+R/2+Math.random()*Math.max(20,c.height-R);}
+      else{x=t.left-a.left+R/2+10+Math.random()*Math.max(20,t.width-R-20);y=t.top-a.top+R/2+50+Math.random()*Math.max(20,t.height-R-70);}
+      const px=x+a.left,py=y+a.top;if(!busy.some(r=>px>r.left-R/2&&px<r.right+R/2&&py>r.top-R/2&&py<r.bottom+R/2))break;
+    }
+  }
   el.style.left=(x-it.w/2)+'px';el.style.top=(y-it.h/2)+'px';
   el.style.setProperty('--r',(long?(Math.random()<.5?90:-90)+(Math.random()*50-25):Math.random()*40-20).toFixed(1)+'deg');
   el.style.zIndex=String(++z);layer.appendChild(el);it.leakAt=Date.now();
