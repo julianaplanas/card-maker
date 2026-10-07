@@ -170,3 +170,6 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 #stickers button:disabled img{opacity:0}
 #stickers button:disabled::after{content:"";width:26px;height:32px;border:2px dashed rgba(17,17,17,.18);border-radius:6px}
 #stickers button:disabled img{position:absolute}
+/* what a tool offers (colours, rolls, stamps, sticker sheets) lies on the empty table when no sheet is out, and under the card otherwise */
+#side{display:contents}
+#table>#side{display:flex;flex-direction:column;grid-column:1/-1;align-self:stretch}

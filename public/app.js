@@ -134,7 +134,7 @@ function show(box,i){
   if(kept[k])pg.drawImage(kept[k],0,0);
   else if(typeof src==='function')src(pg);
   else{const s=Math.max(W/src.width,H/src.height),w=src.width*s,h=src.height*s;pg.drawImage(src,(W-w)/2,(H-h)/2,w,h);}
-  sheetEl.style.transform='';sheetEl.hidden=false;$('cutbar').hidden=false;app.classList.remove('nosheet');place();
+  sheetEl.style.transform='';sheetEl.hidden=false;$('cutbar').hidden=false;app.classList.remove('nosheet');dock();place();
   sheetname.textContent=B.name;
   noise(.12,'bandpass',700,.25);tell('A '+B.name.toLowerCase()+' sheet is on the table.');
 }
@@ -145,7 +145,11 @@ function draw(box){
   if(!left.length){snd.tick();tell(cur&&cur.box===box?'That is the only sheet left in this box.':'This box is empty.');return;}
   show(box,left[Math.floor(Math.random()*left.length)]);
 }
-function clearTable(){stash();cur=null;sheetEl.hidden=true;sheetEl.style.transform='';$('cutbar').hidden=true;app.classList.add('nosheet');place();}
+/* on a wide screen the empty table is where a tool's options are laid out; with a sheet out, they go back under the card */
+const wideMQ=window.matchMedia('(min-width:1100px)');
+function dock(){const home=wideMQ.matches&&app.classList.contains('nosheet')?$('table'):$('cardcell'),s=$('side');if(s.parentNode!==home){home.appendChild(s);place();}}
+if(wideMQ.addEventListener)wideMQ.addEventListener('change',dock);
+function clearTable(){stash();cur=null;sheetEl.hidden=true;sheetEl.style.transform='';$('cutbar').hidden=true;app.classList.add('nosheet');dock();place();}
 function putBack(){if(!cur)return;clearTable();noise(.12,'bandpass',500,.25);tell('Sheet put back in its box.');}
 function trashSheet(){
   if(!cur)return;const t={sheet:true,box:cur.box,i:cur.i};BOXES[t.box].gone[t.i]=true;clearTable();
@@ -854,4 +858,5 @@ $('again').addEventListener('click',()=>{audio();wipe(['front','open','env']);qu
 function quiet(){opening=null;$('openrec')._tape=null;$('openrec').classList.remove('loud');showTape(null);}
 $('newcard').addEventListener('click',()=>{audio();wipe(['front','open']);quiet();snd.rip();tell('A new, empty card.');});
 
+dock();
 })();
