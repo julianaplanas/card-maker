@@ -181,3 +181,7 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 #table>#cutbar{margin-top:70px}
 #table>#sheet{margin-top:70px;box-shadow:6px 8px 0 rgba(17,17,17,.3)}
 #table>#side.front~#sheet,#table:has(#side.front)>#sheet{box-shadow:none}
+/* the copier's lamp passing over a piece */
+.piece.flash{animation:flash .5s}
+@keyframes flash{0%,100%{filter:none}40%{filter:brightness(2.4) contrast(.6)}}
+#app.copying .piece{cursor:copy}

@@ -286,6 +286,7 @@ function drag(el){
   el.addEventListener('pointerdown',e=>{
     audio();
     if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
+    if(tool==='copy'){copyPiece(el);e.preventDefault();return;}
     if(pinned(el)){el.classList.remove('stuck');void el.offsetWidth;el.classList.add('stuck');snd.tick();tell('Held down by tape.');e.preventDefault();return;}
     pick(el);
     sx=el.offsetLeft;sr=angleOf(el);sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
@@ -410,7 +411,7 @@ toolBtns.forEach(b=>b.addEventListener('click',()=>{
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
   marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');$('letteropts').hidden=tool!=='letter';$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
-  app.classList.toggle('sounding',tool==='sound');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
+  app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
   tell(b.textContent.trim()+' picked up.');
 }));
@@ -431,6 +432,32 @@ function seg(a,b){
   const w=tool==='white';
   wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=(w?14:4.5)*ku*tip;wt.strokeStyle=w?'#ffffff':COLORS[penColor];
   wt.beginPath();wt.moveTo(a[0],a[1]);wt.lineTo(b[0],b[1]);wt.stroke();
+}
+/* ---------- the copier: tap a piece and a black-and-white copy comes out onto the table; a copy of a copy is worse ---------- */
+function copyPiece(el){
+  const w=parseFloat(el.style.width),h=parseFloat(el.style.height);if(!w||!h)return;
+  const gen=(el._gen||0)+1,cv=document.createElement('canvas');cv.width=el.width;cv.height=el.height;
+  const x=cv.getContext('2d');x.drawImage(el,0,0);
+  let d;try{d=x.getImageData(0,0,cv.width,cv.height);}catch(_){tell('This piece cannot be copied.');return;}
+  const p=d.data,k=1.5+gen*.45,grain=18+gen*16,lift=gen*10;
+  for(let y=0,i=0;y<cv.height;y++){
+    /* a tired machine leaves faint bands across the page */
+    const band=(Math.sin(y/ (5+gen))>.92?-22*gen:0);
+    for(let c=0;c<cv.width;c++,i+=4){
+      if(p[i+3]<12)continue;
+      let v=.3*p[i]+.59*p[i+1]+.11*p[i+2];
+      v=(v-128)*k+128+lift+band+(Math.random()-.5)*grain;
+      v=v<0?0:v>255?255:v;p[i]=p[i+1]=p[i+2]=v;if(p[i+3]>60)p[i+3]=255;
+    }
+  }
+  x.putImageData(d,0,0);
+  el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
+  tone(90,140,.5,.12,'sawtooth');noise(.5,'bandpass',400,.12);
+  setTimeout(()=>{
+    const t=$('table'),a=app.getBoundingClientRect();let px=el.offsetLeft+26,py=el.offsetTop+26;
+    if(t.offsetParent){const r=t.getBoundingClientRect();px=r.left-a.left+20+Math.random()*Math.max(10,r.width-w-40);py=r.top-a.top+60+Math.random()*Math.max(10,r.height-h-90);}
+    const n=addPiece(cv,w,h,px,py);n._gen=gen;snd.pop();tell('A copy came out onto the table.');
+  },450);
 }
 /* ---------- rubber stamps: each press prints fainter until the stamp goes back on an ink pad ---------- */
 const STAMPS={
