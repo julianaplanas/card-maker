@@ -434,7 +434,7 @@ function putDown(){
   else{
     it.el.classList.remove('held');
     /* a stamp put down with ink still on it prints on the table */
-    if(it.kind==='stamp'){it.ink=inked;if(it.ink>.25&&it.el.isConnected){
+    if(it.kind==='stamp'){it.ink=inked;if(it.ink>.25&&it.el.isConnected&&!inside(it.el,card,0)){
       const c=document.createElement('canvas');c.width=c.height=168;const q=c.getContext('2d');q.translate(84,84);q.scale(1.5,1.5);q.globalAlpha=Math.min(.8,it.ink);q.fillStyle=q.strokeStyle=COLORS[pad];STAMPS[it.data.stamp](q);
       spill(c,it.el.offsetLeft+it.w/2,it.el.offsetTop+it.h*.7,84);it.ink*=.6;}}
   }
@@ -588,6 +588,10 @@ function follow(e){
     /* the roll runs ahead of the strip, so the end of the tape is never underneath it */
     let ux=0,uy=-1;if(pull){const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d>4){ux=(pull.x1-pull.x0)/d;uy=(pull.y1-pull.y0)/d;}}
     it.el.style.left=(x+ux*34-30)+'px';it.el.style.top=(y+uy*34-30)+'px';it.el.style.setProperty('--r','0deg');
+  }
+  else if(it.kind==='stamp'){
+    /* a stamp stays standing on what it just printed, like a real one; lift it by stamping somewhere else */
+    it.el.style.left=(x-it.w/2)+'px';it.el.style.top=(y-it.h*.62)+'px';it.el.style.setProperty('--r','0deg');
   }
   else{const d=Math.max(it.w,it.h)*.5+14;it.el.style.left=(x+d*.75-it.w/2)+'px';it.el.style.top=(y-d*.75-it.h/2)+'px';}
 }
@@ -747,8 +751,8 @@ kit($('stamprack'),Object.keys(STAMPS).map(k=>{
   x.fillStyle='#c9975a';x.strokeStyle='#111';x.lineWidth=1.5;x.beginPath();x.roundRect(4,24,52,40,4);x.fill();x.stroke();
   x.fillStyle='#b5433a';x.fillRect(5,64,50,7);x.strokeRect(5,64,50,7);
   x.save();x.translate(30,44);x.scale(.32,.32);x.fillStyle=x.strokeStyle='#4a2c10';STAMPS[k](x);x.restore();
-  return {name:'The '+k+' stamp',art:c,data:{stamp:k},tool:'stamp',kind:'stamp',ink:0};
-}),it=>{stamp=it.data.stamp;inked=it.ink||0;},'stamps');
+  return {name:'The '+k+' stamp',art:c,data:{stamp:k},tool:'stamp',kind:'stamp',ink:1};
+}),it=>{stamp=it.data.stamp;inked=it.ink==null?1:it.ink;},'stamps');
 kit($('padrow'),[['black','#111111'],['red','#d21f1b'],['blue','#1f3f94']].map(c=>{
   const cv=document.createElement('canvas');cv.width=168;cv.height=104;cv.style.width='84px';cv.style.height='52px';const x=cv.getContext('2d');x.scale(2,2);
   x.strokeStyle='#111';x.lineWidth=1.5;x.fillStyle='#8f959c';x.beginPath();x.roundRect(4,2,76,14,3);x.fill();x.stroke();
