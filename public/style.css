@@ -248,5 +248,6 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .stfly{position:absolute;pointer-events:none;z-index:2147483000;rotate:-6deg;filter:drop-shadow(4px 7px 0 rgba(17,17,17,.3))}
 #stickers button{cursor:grab;touch-action:none}
 /* the tool you are using is the one that looks lifted off the table */
-.loose.held{scale:1.15;filter:drop-shadow(9px 13px 0 rgba(17,17,17,.26))}
+.loose{transition:scale .12s}
+.loose.held{scale:1.32;filter:drop-shadow(10px 15px 0 rgba(17,17,17,.26))}
 #inhand{display:none!important}

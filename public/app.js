@@ -470,7 +470,7 @@ function carryTool(el,e,fresh){
     if(!moved){
       /* a plain tap: out of the box it lands somewhere free and is in your hand; on the table it is picked up or put down */
       if(fresh){const p=freeSpot(it);el.style.left=(p[0]-it.w/2)+'px';el.style.top=(p[1]-it.h/2)+'px';activate(it);}
-      else if(holding!==it){activate(it);snd.tick();}
+      else if(holding===it){putDown();snd.tick();}else{activate(it);snd.tick();}
       return;
     }
     if(inside(el,bin,10)){if(holding===it)putDown();toTrash(el);return;}
@@ -481,7 +481,7 @@ function carryTool(el,e,fresh){
     }
     it.leakAt=Date.now();
     /* carried out of its box or onto the card, it is in your hand; carried off the card, it is put down and your hand is empty */
-    if(fresh||inside(el,card,0))activate(it);else if(holding===it){putDown();snd.tick();}
+    if(fresh)activate(it);
   };
   el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
@@ -498,11 +498,6 @@ setInterval(()=>{
     spill(c,cx+Math.sin(r)*d,cy-Math.cos(r)*d,size);
   });
 },3000);
-/* touching the bare table puts down whatever you hold, so your empty hand can move and peel things again */
-app.addEventListener('pointerdown',e=>{
-  if(!holding||holding.machine||e.target.closest('#card,#marks,.loose,.piece,#side,#sheet,#cutbar,#shelf,#mail,button,label'))return;
-  putDown();snd.tick();tell('Put down. Your hand is empty.');
-});
 /* the boxes on the shelf: tap one to open it on the table, tap again to close it */
 const KITS={pens:'pencase',glitter:'glitcase',white:'whitecase',tape:'tapeopts',stamps:'stampopts',stickers:'letteropts',pins:'pinopts',recorder:'sndopts',copier:null};
 let padOpen=0,padSince=null;
@@ -922,19 +917,27 @@ function stick(){
   el.dataset.sticky='1';el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
   snd.glue();tell('A strip of tape, stuck down.');
 }
+/* One rule for every tool: a tap makes it bigger and it is in your hand; another tap makes it small again and then it is only a thing you can carry.
+   While it is big, presses on the card go to the card, even where the tool itself lies: only a tap that does not move puts it down. */
+let waiting=null;
 marks.addEventListener('pointerdown',e=>{
   audio();
-  /* a tool lying on the card is a thing you can take hold of and carry away, the one in your hand included */
-  const lying=[...layer.querySelectorAll('.loose')].sort((p,q)=>(+q.style.zIndex||0)-(+p.style.zIndex||0)).find(el=>{const r=el.getBoundingClientRect(),m=holding&&holding.el===el?12:0;return e.clientX>r.left+m&&e.clientX<r.right-m&&e.clientY>r.top+m&&e.clientY<r.bottom-m;});
-  if(lying){e.preventDefault();carryTool(lying,e,false);return;}
+  const lying=[...layer.querySelectorAll('.loose')].sort((p,q)=>(+q.style.zIndex||0)-(+p.style.zIndex||0)).find(el=>{const r=el.getBoundingClientRect();return e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom;});
+  if(lying&&!(holding&&holding.el===lying)){e.preventDefault();carryTool(lying,e,false);return;}
   try{marks.setPointerCapture(e.pointerId);}catch(_){}
-  follow(e);
-  if(tool==='letter'){stickLetter(e);$('cardhint').hidden=true;e.preventDefault();return;}
-  if(tool==='stamp'){ku=MW/marks.getBoundingClientRect().width;press1(mpos(e));$('cardhint').hidden=true;e.preventDefault();return;}
-  if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0};$('cardhint').hidden=true;e.preventDefault();return;}
-  ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;e.preventDefault();
+  e.preventDefault();
+  if(lying){waiting=e;return;}
+  begin(e);
 });
+function begin(e){
+  follow(e);
+  if(tool==='letter'){stickLetter(e);$('cardhint').hidden=true;return;}
+  if(tool==='stamp'){ku=MW/marks.getBoundingClientRect().width;press1(mpos(e));$('cardhint').hidden=true;return;}
+  if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0};$('cardhint').hidden=true;return;}
+  ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;
+}
 marks.addEventListener('pointermove',e=>{
+  if(waiting){if(Math.hypot(e.clientX-waiting.clientX,e.clientY-waiting.clientY)<6)return;const w=waiting;waiting=null;begin(w);}
   if(pull){pulling(e);follow(e);return;}
   if(mp)follow(e);
   if(!mp)return;const p=mpos(e),d=Math.hypot(p[0]-mp[0],p[1]-mp[1]);if(d<3)return;
@@ -961,7 +964,7 @@ function settle(force){
   mk.save();mk.globalAlpha=alpha;mk.drawImage(wet,0,0);mk.restore();
   wt.clearRect(0,0,MW,MH);
 }
-const mend=()=>{if(pull){stick();return;}if(!mp)return;mp=null;settle();};
+const mend=()=>{if(waiting){waiting=null;putDown();snd.tick();return;}if(pull){stick();return;}if(!mp)return;mp=null;settle();};
 marks.addEventListener('pointerup',mend);marks.addEventListener('pointercancel',mend);
 
 function toTrash(el){if(el===taped)showTape(null);
