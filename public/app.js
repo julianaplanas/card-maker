@@ -116,6 +116,10 @@ function mag2(c){
 
 /* ---------- boxes of material: one sheet out on the table at a time; a sheet keeps its holes ---------- */
 const BOXES={mags:{name:'MAGAZINE',pages:[mag1,mag2],gone:{}},paint:{name:'PAINTING',pages:[drawScene,portrait,gridArt],gone:{}},yours:{name:'YOUR PICTURE',pages:[],gone:{}}};
+// real pictures from the materials folders replace the placeholder drawings once they have loaded
+fetch('/api/materials').then(r=>r.ok?r.json():{}).then(m=>{Object.keys(m||{}).forEach(box=>{const B=BOXES[box],urls=m[box]||[];if(!B||!urls.length)return;const got=[];let left=urls.length;
+  const done=()=>{if(--left||!got.length)return;const used=Object.keys(B.gone).length||(cur&&cur.box===box)||Object.keys(kept).some(k=>k.indexOf(box)===0);if(used)got.forEach(im=>B.pages.push(im));else B.pages=got;};
+  urls.forEach(u=>{const im=new Image();im.onload=()=>{got.push(im);done();};im.onerror=done;im.src=u;});});}).catch(()=>{});
 const kept={};let cur=null;
 const sheetEl=$('sheet'),grip=$('grip'),sheetname=$('sheetname');
 function stash(){

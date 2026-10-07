@@ -206,6 +206,24 @@ app.get('/card/:id', async (req, res) => {
   }
 });
 
+// The pictures in the boxes: whatever image files sit in public/materials/magazines and /paintings.
+const MATERIALS = { mags: 'magazines', paint: 'paintings' };
+app.get('/api/materials', (req, res) => {
+  const out = {};
+  for (const box of Object.keys(MATERIALS)) {
+    try {
+      out[box] = fs
+        .readdirSync(path.join(__dirname, 'public', 'materials', MATERIALS[box]))
+        .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
+        .sort()
+        .map((f) => '/materials/' + MATERIALS[box] + '/' + encodeURIComponent(f));
+    } catch (e) {
+      out[box] = [];
+    }
+  }
+  res.json(out);
+});
+
 app.get('/healthz', (req, res) => res.send('ok'));
 
 app.use(express.static(path.join(__dirname, 'public')));

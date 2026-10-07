@@ -18,7 +18,7 @@ It follows two rules:
 - **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
 - **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound sway and glow, and play when tapped.
 
-The pictures in the boxes are placeholder drawings. Tape, stamps, letters, a copier, pins, flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
+The pictures in the boxes are placeholder drawings until you add your own: put JPG, PNG or WebP files in `public/materials/magazines` and `public/materials/paintings`, and each file becomes a sheet in that box. Tape, stamps, letters, a copier, pins, flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
 
 ## Run it on your computer
 
