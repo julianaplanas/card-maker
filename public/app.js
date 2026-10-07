@@ -605,10 +605,7 @@ function showTape(el){
   const t=taped._tape||{};
   document.querySelectorAll('#tape [data-rate]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.rate===(t.rate||1))));
   $('back').setAttribute('aria-pressed',String(!!t.back));
-  /* a trim is a cut: the sliders only cover the tape that is left, so what was cut off cannot come back */
-  const a=Math.round((t.a||0)*100),b=Math.round((t.b==null?1:t.b)*100),room=b-a>10;
-  $('ta').min=a;$('ta').max=room?b-10:a;$('ta').value=a;$('tb').min=room?a+10:b;$('tb').max=b;$('tb').value=b;
-  $('ta').disabled=$('tb').disabled=!room;
+  
 }
 function setTape(change){
   if(!taped)return;
@@ -618,8 +615,7 @@ function setTape(change){
 }
 document.querySelectorAll('#tape [data-rate]').forEach(b=>b.addEventListener('click',()=>{audio();setTape({rate:+b.dataset.rate});}));
 $('back').addEventListener('click',()=>{audio();setTape({back:!(taped&&taped._tape&&taped._tape.back)});});
-$('ta').addEventListener('change',()=>{audio();snd.snip();setTape({a:+$('ta').value/100});});
-$('tb').addEventListener('change',()=>{audio();snd.snip();setTape({b:+$('tb').value/100});});
+
 /* one press does both jobs: a quick tap plays what is there, holding records over it */
 function press(el,e,maxMs,get,set){
   e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}

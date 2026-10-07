@@ -98,8 +98,6 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 #tape{flex:1 1 100%;grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--gap)}
 #tape button{flex:1 1 auto}
 #tape button[aria-pressed=true]{background:var(--blue);color:var(--on-dark)}
-#tape label{flex:1 1 140px;display:flex;align-items:center;gap:8px;min-height:48px;padding:0 12px;background:var(--paper);font-weight:700}
-#tape input{flex:1;min-width:0;accent-color:var(--red)}
 .taped{outline:4px dashed var(--blue);outline-offset:4px}
 #micstate{flex:1 1 100%;margin:0;padding:10px 12px;background:var(--paper);font-size:15px;line-height:1.3;min-height:1.3em}
 #micstate.bad{background:var(--red);color:var(--on-dark)}
