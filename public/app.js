@@ -134,7 +134,7 @@ function show(box,i){
   if(kept[k])pg.drawImage(kept[k],0,0);
   else if(typeof src==='function')src(pg);
   else{const s=Math.max(W/src.width,H/src.height),w=src.width*s,h=src.height*s;pg.drawImage(src,(W-w)/2,(H-h)/2,w,h);}
-  sheetEl.style.transform='';sheetEl.hidden=false;$('cutbar').hidden=false;app.classList.remove('nosheet');dock();place();
+  sheetEl.style.transform='';sheetEl.hidden=false;$('cutbar').hidden=false;app.classList.remove('nosheet');dock();onTop(false);place();
   sheetname.textContent=B.name;
   noise(.12,'bandpass',700,.25);tell('A '+B.name.toLowerCase()+' sheet is on the table.');
 }
@@ -145,9 +145,13 @@ function draw(box){
   if(!left.length){snd.tick();tell(cur&&cur.box===box?'That is the only sheet left in this box.':'This box is empty.');return;}
   show(box,left[Math.floor(Math.random()*left.length)]);
 }
-/* on a wide screen the empty table is where a tool's options are laid out; with a sheet out, they go back under the card */
+/* on a wide screen the table is where a tool's options are laid out */
 const wideMQ=window.matchMedia('(min-width:1100px)');
-function dock(){const home=wideMQ.matches&&app.classList.contains('nosheet')?$('table'):$('cardcell'),s=$('side');if(s.parentNode!==home){home.appendChild(s);place();}}
+function dock(){const home=wideMQ.matches?$('table'):$('cardcell'),s=$('side');if(s.parentNode!==home){home.appendChild(s);place();}}
+/* the sheet and a tool's options lie on the same table, one over the other: whichever was touched last is on top */
+function onTop(opts){$('side').classList.toggle('front',opts);}
+$('side').addEventListener('pointerdown',()=>onTop(true),true);
+sheetEl.addEventListener('pointerdown',()=>onTop(false),true);$('cutbar').addEventListener('pointerdown',()=>onTop(false),true);
 if(wideMQ.addEventListener)wideMQ.addEventListener('change',dock);
 function clearTable(){stash();cur=null;sheetEl.hidden=true;sheetEl.style.transform='';$('cutbar').hidden=true;app.classList.add('nosheet');dock();place();}
 function putBack(){if(!cur)return;clearTable();noise(.12,'bandpass',500,.25);tell('Sheet put back in its box.');}
@@ -402,7 +406,7 @@ let cutTool='scissors';
 let tool='hand',mp=null,mtrav=0;
 const toolBtns=document.querySelectorAll('[data-tool]');
 toolBtns.forEach(b=>b.addEventListener('click',()=>{
-  audio();tool=b.dataset.tool;
+  audio();tool=b.dataset.tool;onTop(true);
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
   marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');$('letteropts').hidden=tool!=='letter';$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
