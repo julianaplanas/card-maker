@@ -406,7 +406,7 @@ const PENS=['pen','glitter','white'];
    Every tool lives in a box on the shelf. Taking one out puts it in your hand; picking up something else leaves it lying on the table.
    It only goes back if you carry it back. Things left out spoil, for good: markers dry, white-out thickens, glitter leaks, tape gathers fluff. */
 let holding=null;
-const SPOIL={marker:150,white:150,tape:120,pad:200,leakEvery:18,leaks:5};
+const SPOIL={marker:150,white:150,tape:120,pad:1500,leakEvery:18,leaks:5};
 function age(it){return ((it.out||0)+(it.t0?Date.now()-it.t0:0))/1000;}
 function holdable(b,it){
   const a=b.firstElementChild;it.btn=b;it.out=0;b._item=it;
@@ -461,13 +461,14 @@ function lay(it,x,y){
   el.addEventListener('pointerdown',e=>{audio();e.preventDefault();carryTool(el,e,false);});
   return el;
 }
-function carryTool(el,e,fresh){
+function carryTool(el,e,fresh,onTap){
   try{el.setPointerCapture(e.pointerId);}catch(_){}
   const ox=e.clientX-el.offsetLeft,oy=e.clientY-el.offsetTop,sx=e.clientX,sy=e.clientY,it=el._item;let moved=false;el.style.zIndex=String(100000+ ++z);
   const mv=ev=>{if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>6)moved=true;if(moved){el.style.left=(ev.clientX-ox)+'px';el.style.top=(ev.clientY-oy)+'px';}};
   const up=()=>{
     el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
     if(!moved){
+      if(onTap){onTap();return;}
       /* a plain tap: out of the box it lands somewhere free and is in your hand; on the table it is picked up or put down */
       if(fresh){const p=freeSpot(it);el.style.left=(p[0]-it.w/2)+'px';el.style.top=(p[1]-it.h/2)+'px';activate(it);}
       else if(holding===it){putDown();snd.tick();}else{activate(it);snd.tick();}
@@ -501,7 +502,7 @@ setInterval(()=>{
 /* the boxes on the shelf: tap one to open it on the table, tap again to close it */
 const KITS={pens:'pencase',glitter:'glitcase',white:'whitecase',tape:'tapeopts',stamps:'stampopts',stickers:'letteropts',pins:'pinopts',recorder:'sndopts',copier:null};
 let padOpen=0,padSince=null;
-function padWet(){return Math.max(.12,1-((padOpen+(padSince?Date.now()-padSince:0))/1000)/SPOIL.pad);}
+function padWet(){return Math.max(.35,1-((padOpen+(padSince?Date.now()-padSince:0))/1000)/SPOIL.pad);}
 function kitOpen(name,open){
   const b=document.querySelector('.kitbox[data-kit="'+name+'"]'),id=KITS[name];b.setAttribute('aria-expanded',String(open));
   if(id)$(id).hidden=!open;
@@ -930,6 +931,8 @@ marks.addEventListener('pointerdown',e=>{
   if(lying&&!(holding&&holding.el===lying)){e.preventDefault();carryTool(lying,e,false);return;}
   try{marks.setPointerCapture(e.pointerId);}catch(_){}
   e.preventDefault();
+  /* a stamp is pressed by tapping, so tapping the stamp itself presses it again right there; dragging it carries it */
+  if(lying&&tool==='stamp'){try{marks.releasePointerCapture(e.pointerId);}catch(_){}carryTool(lying,e,false,()=>begin(e));return;}
   if(lying){waiting=e;return;}
   begin(e);
 });
