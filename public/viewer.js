@@ -132,14 +132,72 @@
       const im = document.createElement('img');
       im.src = s.img;
       im.alt = '';
+      im.draggable = false; // otherwise the browser drags the picture away instead of letting the piece turn
       b.appendChild(im);
       const wiggle = () => {
         b.classList.remove('cv-wig');
         void b.offsetWidth;
         b.classList.add('cv-wig');
       };
+      let spun = false;
+      if (!s.audio) b.classList.add('cv-quiet');
+      if (s.pin) {
+        // The piece is laid out by its top-left corner but turns around its pin, so shift it to where the maker left it.
+        const F = s.face === 'front' ? [600, 840] : [1200, 840];
+        const R = ((s.r || 0) * Math.PI) / 180;
+        const dx = (0.5 - s.pin.x) * s.w * F[0];
+        const dy = (0.5 - s.pin.y) * s.h * F[1];
+        const left = s.x + (dx - (Math.cos(R) * dx - Math.sin(R) * dy)) / F[0];
+        const top = s.y + (dy - (Math.sin(R) * dx + Math.cos(R) * dy)) / F[1];
+        b.style.left = left * 100 + '%';
+        b.style.top = top * 100 + '%';
+        b.style.transformOrigin = s.pin.x * 100 + '% ' + s.pin.y * 100 + '%';
+        b.classList.add('cv-pin');
+        b.setAttribute('aria-label', s.audio ? 'A piece of the card that spins and plays a sound' : 'A piece of the card that spins. Drag it, or use the left and right arrow keys.');
+        let ang = s.r || 0;
+        let from = null;
+        const about = (e) => {
+          const r = root.getBoundingClientRect();
+          return (Math.atan2(e.clientY - (r.top + (top + s.h * s.pin.y) * r.height), e.clientX - (r.left + (left + s.w * s.pin.x) * r.width)) * 180) / Math.PI;
+        };
+        const set = (a) => {
+          ang = a;
+          b.style.setProperty('--r', a.toFixed(1) + 'deg');
+        };
+        b.addEventListener('pointerdown', (e) => {
+          try {
+            b.setPointerCapture(e.pointerId);
+          } catch (_) {
+            /* the piece still turns while the pointer stays over it */
+          }
+          from = { a: about(e), r: ang };
+          spun = false;
+          b.classList.add('cv-held');
+        });
+        b.addEventListener('pointermove', (e) => {
+          if (!from) return;
+          const d = about(e) - from.a;
+          if (Math.abs(d) > 3) spun = true;
+          if (spun) set(from.r + d);
+        });
+        const drop = () => {
+          from = null;
+          b.classList.remove('cv-held');
+        };
+        b.addEventListener('pointerup', drop);
+        b.addEventListener('pointercancel', drop);
+        b.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+          e.preventDefault();
+          set(ang + (e.key === 'ArrowLeft' ? -10 : 10));
+        });
+      }
       b.addEventListener('click', () => {
-        play(s.audio, s.t);
+        if (spun) {
+          spun = false;
+          return;
+        }
+        if (s.audio) play(s.audio, s.t);
         wiggle();
       });
       // when the wiggle ends, go back to the gentle sway that marks a piece as having a sound

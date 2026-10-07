@@ -185,3 +185,9 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .piece.flash{animation:flash .5s}
 @keyframes flash{0%,100%{filter:none}40%{filter:brightness(2.4) contrast(.6)}}
 #app.copying .piece{cursor:copy}
+/* a pinned piece turns around its pin, for the maker and for whoever opens the card */
+.piece[data-pinned]{cursor:grab}
+#app.pinning .piece{cursor:crosshair}
+.cv-piece.cv-pin{cursor:grab;touch-action:none}
+.cv-piece.cv-held{animation:none;cursor:grabbing}
+.cv-piece.cv-quiet img{animation:none}

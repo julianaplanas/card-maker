@@ -173,9 +173,11 @@ function readExtras(raw) {
     if (!s || !SIDES.includes(s.face)) return null;
     const nums = [s.x, s.y, s.w, s.h, s.r].map(Number);
     if (nums.some((n) => !Number.isFinite(n) || Math.abs(n) > 400)) return null;
-    const audio = readAudio(s.audio);
-    if (!audio || typeof s.img !== 'string' || s.img.length > MAX_PIECE_CHARS || !PNG.test(s.img)) return null;
-    sounds.push({ face: s.face, x: nums[0], y: nums[1], w: nums[2], h: nums[3], r: nums[4], img: s.img, audio, t: readTape(s.t) });
+    const audio = s.audio == null ? null : readAudio(s.audio);
+    // a pin: where on the piece (0 to 1 across and down) it turns around
+    const pin = s.pin && [s.pin.x, s.pin.y].every((n) => typeof n === 'number' && n >= 0 && n <= 1) ? { x: s.pin.x, y: s.pin.y } : null;
+    if ((s.audio != null && !audio) || (!audio && !pin) || typeof s.img !== 'string' || s.img.length > MAX_PIECE_CHARS || !PNG.test(s.img)) return null;
+    sounds.push({ face: s.face, x: nums[0], y: nums[1], w: nums[2], h: nums[3], r: nums[4], img: s.img, audio, t: audio ? readTape(s.t) : null, pin });
   }
   let opening = null;
   if (raw.opening != null) {

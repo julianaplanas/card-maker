@@ -287,7 +287,9 @@ function drag(el){
     audio();
     if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
     if(tool==='copy'){copyPiece(el);e.preventDefault();return;}
+    if(tool==='pin'){pinDown(el,e);e.preventDefault();return;}
     if(pinned(el)){el.classList.remove('stuck');void el.offsetWidth;el.classList.add('stuck');snd.tick();tell('Held down by tape.');e.preventDefault();return;}
+    if(el._pin&&el.dataset.glued){spin(el,e);return;}
     pick(el);
     sx=el.offsetLeft;sr=angleOf(el);sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
     held=true;try{el.setPointerCapture(e.pointerId);}catch(_){}
@@ -411,7 +413,7 @@ toolBtns.forEach(b=>b.addEventListener('click',()=>{
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
   marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');$('letteropts').hidden=tool!=='letter';$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
-  app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
+  app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');app.classList.toggle('pinning',tool==='pin');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
   tell(b.textContent.trim()+' picked up.');
 }));
@@ -432,6 +434,36 @@ function seg(a,b){
   const w=tool==='white';
   wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=(w?14:4.5)*ku*tip;wt.strokeStyle=w?'#ffffff':COLORS[penColor];
   wt.beginPath();wt.moveTo(a[0],a[1]);wt.lineTo(b[0],b[1]);wt.stroke();
+}
+/* ---------- pins: a brass pin through a piece fixes it to the card at that point, and the piece turns around it ---------- */
+function pinPoint(el){
+  const w=parseFloat(el.style.width),h=parseFloat(el.style.height),r=angleOf(el)*Math.PI/180,lx=(el._pin.x-.5)*w,ly=(el._pin.y-.5)*h;
+  return [el.offsetLeft+w/2+Math.cos(r)*lx-Math.sin(r)*ly,el.offsetTop+h/2+Math.sin(r)*lx+Math.cos(r)*ly];
+}
+function pinDown(el,e){
+  if(el._pin||!el.dataset.glued){snd.tick();return;}
+  const w=parseFloat(el.style.width),h=parseFloat(el.style.height),a=app.getBoundingClientRect(),r=-angleOf(el)*Math.PI/180;
+  const px=e.clientX-a.left-(el.offsetLeft+w/2),py=e.clientY-a.top-(el.offsetTop+h/2),lx=px*Math.cos(r)-py*Math.sin(r)+w/2,ly=px*Math.sin(r)+py*Math.cos(r)+h/2;
+  if(lx<0||ly<0||lx>w||ly>h){snd.tick();return;}
+  const x=el.getContext('2d'),k=el.width/w,cx=lx*k,cy=ly*k,R=7*k;
+  x.save();x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.globalAlpha=1;
+  const g=x.createRadialGradient(cx-R*.35,cy-R*.35,R*.1,cx,cy,R);g.addColorStop(0,'#fff3b0');g.addColorStop(.45,'#d9a520');g.addColorStop(1,'#7a5608');
+  x.beginPath();x.arc(cx+k,cy+1.5*k,R,0,7);x.fillStyle='rgba(17,17,17,.35)';x.fill();
+  x.beginPath();x.arc(cx,cy,R,0,7);x.fillStyle=g;x.fill();x.lineWidth=k;x.strokeStyle='#5a3f05';x.stroke();x.restore();
+  el._pin={x:lx/w,y:ly/h};el.dataset.pinned='1';clearTimeout(el._t);el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');
+  if(picked===el)pick(null);snd.punch();tell('Pinned. It turns around the pin now.');
+}
+function spin(el,e){
+  e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}
+  const a=app.getBoundingClientRect(),P=pinPoint(el),w=parseFloat(el.style.width),h=parseFloat(el.style.height);
+  const C0=[el.offsetLeft+w/2-P[0],el.offsetTop+h/2-P[1]],r0=angleOf(el),ang=ev=>Math.atan2(ev.clientY-a.top-P[1],ev.clientX-a.left-P[0]),a0=ang(e);let ticks=0;
+  const move=ev=>{
+    const d=ang(ev)-a0,c=Math.cos(d),s=Math.sin(d);
+    el.style.left=(P[0]+c*C0[0]-s*C0[1]-w/2)+'px';el.style.top=(P[1]+s*C0[0]+c*C0[1]-h/2)+'px';el.style.setProperty('--r',(r0+d*180/Math.PI).toFixed(1)+'deg');
+    const t=Math.round(d*180/Math.PI/15);if(t!==ticks){ticks=t;snd.tick();}
+  };
+  const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);};
+  el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
 /* ---------- the copier: tap a piece and a black-and-white copy comes out onto the table; a copy of a copy is worse ---------- */
 function copyPiece(el){
@@ -789,7 +821,7 @@ function render(f,quietOnly){
   const o=origin[f];
   if(o){
     const k=cw/o.w;
-    [...layer.querySelectorAll('.piece,.goo')].filter(p=>p.dataset.face===f&&!(quietOnly&&p._snd)).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
+    [...layer.querySelectorAll('.piece,.goo')].filter(p=>p.dataset.face===f&&!(quietOnly&&(p._snd||p._pin))).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
       const w=parseFloat(p.style.width),h=parseFloat(p.style.height),x=parseFloat(p.style.left)-o.x,y=parseFloat(p.style.top)-o.y;
       c.save();c.scale(k,k);c.translate(x+w/2,y+h/2);
       if(p.classList.contains('goo')){c.fillStyle=p.style.background;c.beginPath();c.ellipse(0,0,w/2,h/2,0,0,7);c.fill();}
@@ -804,9 +836,9 @@ const mail=$('mail'),mailcv=$('mailcv'),mailstage=$('mailstage');
 let shots=null,flat=null,extras=null,viewer=null,sealed=false;
 function loudPieces(){
   const out=[];
-  [...layer.querySelectorAll('.piece')].filter(p=>p._snd&&p.dataset.face&&origin[p.dataset.face]).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
+  [...layer.querySelectorAll('.piece')].filter(p=>(p._snd||p._pin)&&p.dataset.face&&origin[p.dataset.face]).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
     const o=origin[p.dataset.face],w=parseFloat(p.style.width),h=parseFloat(p.style.height);
-    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd,t:p._tape||null});
+    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd||null,t:p._tape||null,pin:p._pin||null});
   });
   return out;
 }

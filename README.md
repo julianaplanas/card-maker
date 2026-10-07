@@ -17,12 +17,13 @@ It follows two rules:
 - **Stamps**: six rubber stamps and three ink pads. Each press prints fainter; picking a pad (or a stamp) inks it again.
 - **Letters**: three sheets of sticker letters (glitter, bubble, tiles). Every sticker is shown on its sheet; tap one to peel it, then tap the card to stick it. Each exists once, so a sheet can run out of a letter.
 - **Copier**: tap any piece and a black-and-white copy of it comes out onto the table. A copy of a copy comes out worse.
+- **Pins**: push a brass pin through a piece on the card. The piece then turns around its pin, and whoever opens the card can spin it too.
 - **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card. The sound you touched last can be played slow or fast, and backwards, like a tape.
 - **The trash**: drag anything into it. Double-click to take the last thing back out, then click for the ones before it.
 - **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
 - **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound sway and glow, and play when tapped.
 
-The pictures in the boxes are placeholder drawings until you add your own: put JPG, PNG or WebP files in `public/materials/magazines` and `public/materials/paintings`, and each file becomes a sheet in that box. Pins, flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
+The pictures in the boxes are placeholder drawings until you add your own: put JPG, PNG or WebP files in `public/materials/magazines` and `public/materials/paintings`, and each file becomes a sheet in that box. Flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
 
 ## Run it on your computer
 
@@ -72,5 +73,5 @@ The server accepts at most 30 new cards per hour from one address, and each pict
 - The table (loose pieces, sheets, the trash) lasts only while the page is open.
 - Recording needs the browser's permission to use the microphone, and the page must be served over https (Railway does this) or from localhost.
 - Recordings use the format the maker's browser produces. Most combinations play fine, but an older Safari may not play a recording made in Chrome or Firefox.
-- A piece with a sound always shows on top of the other pieces for the recipient, even if you glued something over it.
+- A piece with a sound or a pin always shows on top of the other pieces for the recipient, even if you glued something over it.
 - On a phone, a piece cannot yet be dragged from a sheet to a card that is off screen.
