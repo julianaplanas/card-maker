@@ -72,7 +72,7 @@
       <button type="button" class="g" data-tool="glitter" aria-pressed="false">GLITTER</button>
       <button type="button" data-tool="white" aria-pressed="false">WHITE-OUT</button>
       <button type="button" data-tool="sound" aria-pressed="false">SOUND</button>
-      <button type="button" class="soon" disabled>TAPE<small>soon</small></button>
+      <button type="button" data-tool="tape" aria-pressed="false">TAPE</button>
       <button type="button" class="soon" disabled>STAMPS<small>soon</small></button>
       <button type="button" class="soon" disabled>LETTERS<small>soon</small></button>
       <button type="button" class="soon" disabled>COPIER<small>soon</small></button>
@@ -87,6 +87,12 @@
       <button type="button" class="tip" data-size="0.45" aria-pressed="false"><span class="dot" style="width:6px;height:6px"></span>THIN</button>
       <button type="button" class="tip" data-size="1" aria-pressed="true"><span class="dot" style="width:12px;height:12px"></span>MEDIUM</button>
       <button type="button" class="tip" data-size="2.4" aria-pressed="false"><span class="dot" style="width:22px;height:22px"></span>FAT</button>
+    </div>
+    <div class="tools" id="tapeopts" role="group" aria-label="Rolls of tape" hidden>
+      <button type="button" data-roll="clear" aria-pressed="true">CLEAR</button>
+      <button type="button" class="y" data-roll="yellow" aria-pressed="false">YELLOW</button>
+      <button type="button" class="r" data-roll="red" aria-pressed="false">RED</button>
+      <button type="button" class="b" data-roll="blue" aria-pressed="false">BLUE</button>
     </div>
     <div class="tools" id="sndopts" role="group" aria-label="Sound for a moment" hidden>
       <button type="button" id="openrec">WHEN THE CARD OPENS</button>

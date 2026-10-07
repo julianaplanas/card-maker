@@ -390,7 +390,7 @@ const toolBtns=document.querySelectorAll('[data-tool]');
 toolBtns.forEach(b=>b.addEventListener('click',()=>{
   audio();tool=b.dataset.tool;
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
-  marks.classList.toggle('on',PENS.includes(tool));$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
+  marks.classList.toggle('on',PENS.includes(tool)||tool==='tape');$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
   app.classList.toggle('sounding',tool==='sound');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
@@ -414,11 +414,40 @@ function seg(a,b){
   wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=(w?14:4.5)*ku*tip;wt.strokeStyle=w?'#ffffff':COLORS[penColor];
   wt.beginPath();wt.moveTo(a[0],a[1]);wt.lineTo(b[0],b[1]);wt.stroke();
 }
+/* ---------- sticky tape: pull a strip across the card; it sticks at once and becomes a piece like any other ---------- */
+const ROLLS={clear:'rgba(244,236,205,.55)',yellow:'rgba(247,209,23,.8)',red:'rgba(210,31,27,.8)',blue:'rgba(31,63,148,.8)'},TAPE_W=34;
+let roll='clear',pull=null;
+document.querySelectorAll('[data-roll]').forEach(b=>b.addEventListener('click',()=>{audio();roll=b.dataset.roll;snd.tick();document.querySelectorAll('[data-roll]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
+function pulling(e){
+  pull.x1=e.clientX;pull.y1=e.clientY;const p=mpos(e);
+  wt.clearRect(0,0,MW,MH);wt.lineCap='butt';wt.lineWidth=TAPE_W*ku;wt.strokeStyle=ROLLS[roll];
+  wt.beginPath();wt.moveTo(pull.p[0],pull.p[1]);wt.lineTo(p[0],p[1]);wt.stroke();
+  const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d-pull.said>40){pull.said=d;noise(.05,'highpass',2500,.12);}
+}
+function stick(){
+  const t=pull;pull=null;wt.clearRect(0,0,MW,MH);
+  const L=Math.hypot(t.x1-t.x0,t.y1-t.y0);if(L<24)return;
+  const a=app.getBoundingClientRect(),cv=document.createElement('canvas'),k=2,H=TAPE_W;
+  cv.width=Math.round(L*k);cv.height=H*k;const x=cv.getContext('2d');x.scale(k,k);
+  /* both ends are torn off the roll, so they are jagged */
+  x.beginPath();x.moveTo(3,0);x.lineTo(L-3,0);
+  for(let i=1;i<=6;i++)x.lineTo(L-(i%2?0:5)-Math.random()*2,H*i/6);
+  x.lineTo(3,H);
+  for(let i=5;i>=0;i--)x.lineTo((i%2?0:5)+Math.random()*2,H*i/6);
+  x.closePath();x.fillStyle=ROLLS[roll];x.fill();
+  x.globalCompositeOperation='source-atop';x.fillStyle='rgba(255,255,255,.22)';x.fillRect(0,3,L,3);x.fillStyle='rgba(17,17,17,.08)';x.fillRect(0,H-4,L,4);
+  const el=addPiece(cv,L,H,(t.x0+t.x1)/2-a.left-L/2,(t.y0+t.y1)/2-a.top-H/2);
+  el.style.setProperty('--r',(Math.atan2(t.y1-t.y0,t.x1-t.x0)*180/Math.PI).toFixed(1)+'deg');
+  el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
+  snd.glue();tell('A strip of tape, stuck down.');
+}
 marks.addEventListener('pointerdown',e=>{
   audio();try{marks.setPointerCapture(e.pointerId);}catch(_){}
+  if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0};$('cardhint').hidden=true;e.preventDefault();return;}
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;e.preventDefault();
 });
 marks.addEventListener('pointermove',e=>{
+  if(pull){pulling(e);return;}
   if(!mp)return;const p=mpos(e),d=Math.hypot(p[0]-mp[0],p[1]-mp[1]);if(d<3)return;
   seg(mp,p);mp=p;mtrav+=d;if(mtrav>70){mtrav=0;snd.mark();}
 });
@@ -443,7 +472,7 @@ function settle(){
   mk.save();mk.globalAlpha=alpha;mk.drawImage(wet,0,0);mk.restore();
   wt.clearRect(0,0,MW,MH);
 }
-const mend=()=>{if(!mp)return;mp=null;settle();};
+const mend=()=>{if(pull){stick();return;}if(!mp)return;mp=null;settle();};
 marks.addEventListener('pointerup',mend);marks.addEventListener('pointercancel',mend);
 
 function toTrash(el){if(el===taped)showTape(null);
