@@ -10,6 +10,8 @@ app.use(express.json({ limit: '25mb' }));
 
 const SIDES = ['env', 'front', 'open'];
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const KEEP_DAYS = 14; // a card is removed this many days after its envelope is closed
+const KEEP_MS = KEEP_DAYS * 86400000;
 const ID_PATTERN = /^[A-Za-z0-9_-]{6,16}$/;
 
 // ---------- storage: Postgres when DATABASE_URL is set, plain files otherwise ----------
@@ -43,10 +45,14 @@ function pgStore(url) {
       const r = await pool.query(`SELECT ${side} AS image FROM cards WHERE id = $1`, [id]);
       return r.rows.length ? r.rows[0].image : null;
     },
-    async exists(id) {
+    async created(id) {
       await ready;
-      const r = await pool.query('SELECT 1 FROM cards WHERE id = $1', [id]);
-      return r.rows.length > 0;
+      const r = await pool.query('SELECT created_at FROM cards WHERE id = $1', [id]);
+      return r.rows.length ? new Date(r.rows[0].created_at) : null;
+    },
+    async sweep() {
+      await ready;
+      await pool.query('DELETE FROM cards WHERE created_at < $1', [new Date(Date.now() - KEEP_MS)]);
     },
   };
 }
@@ -76,8 +82,18 @@ function fileStore(dir) {
         return null;
       }
     },
-    async exists(id) {
-      return fs.existsSync(path.join(dir, id));
+    async created(id) {
+      try {
+        return (await fs.promises.stat(path.join(dir, id, 'extras.json'))).mtime;
+      } catch (e) {
+        return null;
+      }
+    },
+    async sweep() {
+      for (const id of await fs.promises.readdir(dir)) {
+        const made = await this.created(id);
+        if (made && Date.now() - made.getTime() > KEEP_MS) await fs.promises.rm(path.join(dir, id), { recursive: true, force: true });
+      }
     },
   };
 }
@@ -85,6 +101,18 @@ function fileStore(dir) {
 const store = process.env.DATABASE_URL
   ? pgStore(process.env.DATABASE_URL)
   : fileStore(path.join(__dirname, 'data'));
+
+// When a card stops existing, or null if there is no such card (or it is already past its date).
+async function until(id) {
+  const made = await store.created(id);
+  if (!made) return null;
+  const end = made.getTime() + KEEP_MS;
+  return end > Date.now() ? end : null;
+}
+function sweep() {
+  store.sweep().catch((e) => console.error('Could not remove old cards:', e.message));
+}
+setInterval(sweep, 3600000).unref();
 
 // ---------- a small limit on how many cards one address can save per hour ----------
 
@@ -159,7 +187,7 @@ app.post('/api/cards', async (req, res) => {
   try {
     const id = crypto.randomBytes(6).toString('base64url');
     await store.save(id, images, JSON.stringify(extras));
-    res.status(201).json({ id });
+    res.status(201).json({ id, until: Date.now() + KEEP_MS });
   } catch (e) {
     console.error('Could not save a card:', e.message);
     res.status(500).json({ error: 'The card could not be saved.' });
@@ -169,10 +197,12 @@ app.post('/api/cards', async (req, res) => {
 app.get('/api/cards/:id/extras.json', async (req, res) => {
   if (!ID_PATTERN.test(req.params.id)) return res.status(404).end();
   try {
-    const extras = await store.loadExtras(req.params.id);
-    res.set('Content-Type', 'application/json');
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    res.send(extras || '{"sounds":[],"opening":null}');
+    const end = await until(req.params.id);
+    if (!end) return res.status(404).end();
+    const extras = JSON.parse((await store.loadExtras(req.params.id)) || '{"sounds":[],"opening":null}');
+    extras.until = end;
+    res.set('Cache-Control', 'private, max-age=3600');
+    res.json(extras);
   } catch (e) {
     console.error('Could not load a card:', e.message);
     res.status(500).end();
@@ -183,10 +213,10 @@ app.get('/api/cards/:id/:side', async (req, res) => {
   const side = req.params.side.replace(/\.jpg$/, '');
   if (!ID_PATTERN.test(req.params.id) || !SIDES.includes(side)) return res.status(404).end();
   try {
-    const image = await store.load(req.params.id, side);
+    const image = (await until(req.params.id)) ? await store.load(req.params.id, side) : null;
     if (!image) return res.status(404).end();
     res.set('Content-Type', 'image/jpeg');
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('Cache-Control', 'private, max-age=3600');
     res.send(image);
   } catch (e) {
     console.error('Could not load a card:', e.message);
@@ -196,7 +226,7 @@ app.get('/api/cards/:id/:side', async (req, res) => {
 
 app.get('/card/:id', async (req, res) => {
   try {
-    if (!ID_PATTERN.test(req.params.id) || !(await store.exists(req.params.id))) {
+    if (!ID_PATTERN.test(req.params.id) || !(await until(req.params.id))) {
       return res.status(404).sendFile(path.join(__dirname, 'public', 'missing.html'));
     }
     res.sendFile(path.join(__dirname, 'public', 'card.html'));
@@ -231,6 +261,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const port = process.env.PORT || 3000;
 store.ready
   .then(() => {
+    sweep();
     app.listen(port, () => console.log(`Card Maker is running on port ${port}, saving cards to ${store.name}.`));
   })
   .catch((e) => {

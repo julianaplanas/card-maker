@@ -637,10 +637,11 @@ function showSaved(r){
   if(r&&r.id){
     $('linktext').textContent=location.origin+'/card/'+r.id;
     $('copy').hidden=false;$('share').hidden=!navigator.share;$('retry').hidden=true;
+    $('keep').textContent='THIS CARD LASTS UNTIL '+CardViewer.day(r.until||Date.now()+14*86400000).toUpperCase()+'. KEEP IT';$('keep').hidden=false;
     tell('The envelope is closed. Its link is ready to share.');
   }else{
     $('linktext').textContent='The card could not be saved. Check your connection.';
-    $('copy').hidden=true;$('share').hidden=true;$('retry').hidden=false;
+    $('copy').hidden=true;$('share').hidden=true;$('keep').hidden=true;$('retry').hidden=false;
     tell('The card could not be saved.');
   }
 }
@@ -651,6 +652,7 @@ $('mailseal').addEventListener('click',()=>{
   const saved=saveCard().catch(()=>null);
   closeUp(()=>{snd.glue();saved.then(showSaved);});
 });
+$('keep').addEventListener('click',()=>{audio();CardViewer.keep({faces:{env:flat.env,front:flat.front,open:flat.open},sounds:extras.sounds,opening:extras.opening}).then(()=>tell('The card was saved as a file.'),()=>tell('The card could not be saved as a file.'));});
 $('retry').addEventListener('click',()=>{audio();$('linktext').textContent='Saving...';$('retry').hidden=true;saveCard().catch(()=>null).then(showSaved);});
 $('share').addEventListener('click',()=>{if(navigator.share)navigator.share({url:$('linktext').textContent}).catch(()=>{});});
 $('copy').addEventListener('click',()=>{

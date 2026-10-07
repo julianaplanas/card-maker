@@ -11,6 +11,21 @@
   });
 
   function start(extras) {
+    const keep = document.getElementById('keep');
+    if (extras && extras.until) {
+      const label = 'THIS CARD LASTS UNTIL ' + window.CardViewer.day(extras.until).toUpperCase() + '. KEEP IT';
+      keep.textContent = label;
+      keep.hidden = false;
+      keep.addEventListener('click', () => {
+        window.CardViewer.keep({ faces, sounds: extras.sounds, opening: extras.opening }).then(
+          () => (say.textContent = 'The card was saved as a file.'),
+          () => {
+            keep.textContent = 'COULD NOT SAVE IT. TRY AGAIN';
+            setTimeout(() => (keep.textContent = label), 2500);
+          }
+        );
+      });
+    }
     window.CardViewer.mount(
       document.getElementById('view'),
       { faces, sounds: (extras && extras.sounds) || [], opening: (extras && extras.opening) || null },

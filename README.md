@@ -64,7 +64,7 @@ The server accepts at most 30 new cards per hour from one address, and each pict
 ## Things to know
 
 - A card cannot be changed or deleted once its envelope is closed.
-- Cards are kept forever; nothing removes old ones yet.
+- A card is removed 14 days after its envelope is closed (`KEEP_DAYS` in `server.js`). Until then, the maker and the recipient each get a button that names the last day and saves the card as one file, `card.html`, which opens like the link does and holds the pictures and sounds.
 - The table (loose pieces, sheets, the trash) lasts only while the page is open.
 - Recording needs the browser's permission to use the microphone, and the page must be served over https (Railway does this) or from localhost.
 - Recordings use the format the maker's browser produces. Most combinations play fine, but an older Safari may not play a recording made in Chrome or Firefox.

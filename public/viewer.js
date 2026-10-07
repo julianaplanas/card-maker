@@ -115,5 +115,50 @@
     };
   }
 
-  window.CardViewer = { mount };
+  // "21 October" for the day a card stops existing
+  function day(until) {
+    return new Date(until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  }
+
+  function asData(url) {
+    if (url.indexOf('data:') === 0) return Promise.resolve(url);
+    return fetch(url)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error('missing'))))
+      .then(
+        (b) =>
+          new Promise((ok, no) => {
+            const fr = new FileReader();
+            fr.onload = () => ok(fr.result);
+            fr.onerror = no;
+            fr.readAsDataURL(b);
+          })
+      );
+  }
+  const text = (url) => fetch(url).then((r) => (r.ok ? r.text() : Promise.reject(new Error('missing'))));
+
+  // Saves the card as one file that opens like the link does: pictures, sounds and this viewer are all inside it.
+  function keep(data) {
+    const sides = ['env', 'front', 'open'];
+    return Promise.all([text('/viewer.js'), text('/style.css'), Promise.all(sides.map((s) => asData(data.faces[s])))]).then((got) => {
+      const faces = {};
+      sides.forEach((s, i) => (faces[s] = got[2][i]));
+      const card = JSON.stringify({ faces, sounds: data.sounds || [], opening: data.opening || null }).replace(/</g, '\\u003c');
+      const html =
+        '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
+        '<title>A card for you</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap">' +
+        '<style>' + got[1] + 'html,body{height:100%}body{padding:16px;box-sizing:border-box;display:flex;align-items:center;justify-content:center}.cv-face{max-height:90vh}</style>' +
+        '</head><body><div id="view"></div><p id="say" class="sr" role="status"></p>' +
+        '<script>' + got[0] + '</' + 'script><script>CardViewer.mount(document.getElementById("view"),' + card +
+        ',function(t){document.getElementById("say").textContent=t;});</' + 'script></body></html>';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      a.download = 'card.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    });
+  }
+
+  window.CardViewer = { mount, keep, day };
 })();

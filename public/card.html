@@ -11,6 +11,8 @@ html,body{height:100%}
 body{padding:16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .cv-face{max-height:74vh}
 .under{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.under button{min-height:48px;padding:0 18px;background:var(--yellow);color:var(--line);font:inherit;font-weight:700;border:0;cursor:pointer}
+.under button:focus-visible{outline:4px solid var(--red);outline-offset:-4px}
 .under a{display:flex;align-items:center;min-height:48px;padding:0 18px;background:var(--paper);color:var(--line);font-weight:700;text-decoration:none}
 .under a:focus-visible{outline:4px solid var(--red);outline-offset:-4px}
 </style>
@@ -18,7 +20,7 @@ body{padding:16px;box-sizing:border-box;display:flex;flex-direction:column;align
 <body>
 <div id="view"></div>
 <p id="say" class="sr" role="status"></p>
-<div class="under"><a href="/">MAKE YOUR OWN</a></div>
+<div class="under"><button type="button" id="keep" hidden></button><a href="/">MAKE YOUR OWN</a></div>
 <script src="/viewer.js"></script>
 <script src="/card.js"></script>
 </body>
