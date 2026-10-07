@@ -469,8 +469,8 @@ function carryTool(el,e,fresh,onTap){
     el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
     if(!moved){
       if(onTap){onTap();return;}
-      /* a plain tap: out of the box it lands somewhere free and is in your hand; on the table it is picked up or put down */
-      if(fresh){const p=freeSpot(it);el.style.left=(p[0]-it.w/2)+'px';el.style.top=(p[1]-it.h/2)+'px';activate(it);}
+      /* a tool only leaves its box in your hand: pressed and let go without carrying it anywhere, it stays in the box */
+      if(fresh){el.remove();it.el=null;it.t0=null;it.btn.classList.remove('out');}
       else if(holding===it){putDown();snd.tick();}else{activate(it);snd.tick();}
       return;
     }
