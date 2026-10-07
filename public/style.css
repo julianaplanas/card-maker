@@ -65,7 +65,7 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .faces button{background:var(--paper);font-weight:700;padding:0 14px}
 .faces button[aria-pressed="true"]{background:var(--line);color:var(--on-dark);outline:3px solid var(--paper);outline-offset:-7px}
 #card.open{width:min(100%,760px);aspect-ratio:10/7;position:relative}
-#card.env{width:min(100%,640px);aspect-ratio:10/7;background:#f6f1e3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 70' preserveAspectRatio='none'%3E%3Cpath d='M0 0L50 38.5L100 0' fill='none' stroke='%23111' stroke-width='0.6'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+#card.env{width:min(100%,640px);aspect-ratio:10/7;background:var(--env,#f6f1e3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 70' preserveAspectRatio='none'%3E%3Cpath d='M0 0L50 38.5L100 0' fill='none' stroke='%23111' stroke-width='0.6'/%3E%3C/svg%3E") center/100% 100% no-repeat}
 #mail{position:fixed;inset:0;z-index:100;background:var(--line);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
 .mailbox{display:flex;flex-direction:column;gap:var(--gap);align-items:center;max-width:100%;max-height:100%}
 /* the card as its recipient sees it (shared by the preview and the recipient's page) */
@@ -74,6 +74,15 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .cv-face{display:block;max-width:100%;max-height:68vh;width:auto;height:auto}
 .cv-piece{position:absolute;background:none;padding:0;min-height:0;transform:rotate(var(--r,0deg));cursor:pointer}
 .cv-piece img{display:block;width:100%;height:100%;filter:drop-shadow(2px 3px 0 rgba(17,17,17,.35))}
+/* a piece that carries a sound sways and glows so it is clear something is there */
+.cv-piece{animation:cv-sway 2.2s ease-in-out infinite}
+.cv-piece img{animation:cv-glow 1.6s ease-in-out infinite}
+@keyframes cv-sway{0%,100%{transform:rotate(calc(var(--r,0deg) - 2.5deg))}50%{transform:rotate(calc(var(--r,0deg) + 2.5deg))}}
+@keyframes cv-glow{0%,100%{filter:drop-shadow(0 0 2px var(--blue)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}50%{filter:drop-shadow(0 0 9px var(--blue)) drop-shadow(0 0 4px var(--blue)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}}
+.piece.loud{animation:hum 1.6s ease-in-out infinite}
+@keyframes hum{0%,100%{filter:drop-shadow(0 0 2px var(--blue)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}50%{filter:drop-shadow(0 0 9px var(--blue)) drop-shadow(0 0 4px var(--blue)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}}
+.tools .sw{flex:0 0 48px;min-height:48px;padding:0}
+.tools .sw[aria-pressed="true"]{outline:4px solid var(--line);outline-offset:-9px}
 .cv-piece.cv-wig{animation:cv-wig .6s}
 @keyframes cv-wig{0%,100%{transform:rotate(var(--r,0deg))}25%{transform:rotate(calc(var(--r,0deg) - 7deg))}60%{transform:rotate(calc(var(--r,0deg) + 6deg))}}
 #app.sounding .piece{cursor:pointer}
@@ -133,4 +142,4 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
   #cutbar button,#cardtools button{flex:0 0 auto;min-height:52px}
 }
 @media (max-width:859px){#app.nosheet #table{display:none}}
-@media (prefers-reduced-motion:reduce){#bin.shake,.cv-piece.cv-wig{animation:none}}
+@media (prefers-reduced-motion:reduce){#bin.shake,.cv-piece,.cv-piece.cv-wig,.cv-piece img,.piece.loud{animation:none}.cv-piece img,.piece.loud{filter:drop-shadow(0 0 6px var(--blue)) drop-shadow(2px 3px 0 rgba(17,17,17,.35))}}

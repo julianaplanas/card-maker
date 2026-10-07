@@ -14,8 +14,8 @@ It follows two rules:
 - **The card**: a front and an inside. Pens in three colors and three tips, glitter glue and white-out. Glue dries after 8 seconds.
 - **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card.
 - **The trash**: drag anything into it. Double-click to take the last thing back out, then click for the ones before it.
-- **The envelope**: decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
-- **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound wiggle when their side appears and play when tapped.
+- **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
+- **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound sway and glow, and play when tapped.
 
 The pictures in the boxes are placeholder drawings. Tape, stamps, letters, a copier, pins, flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
 

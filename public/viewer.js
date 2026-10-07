@@ -80,6 +80,10 @@
         play(s.audio);
         wiggle();
       });
+      // when the wiggle ends, go back to the gentle sway that marks a piece as having a sound
+      b.addEventListener('animationend', (ev) => {
+        if (ev.animationName === 'cv-wig') b.classList.remove('cv-wig');
+      });
       root.appendChild(b);
       return { face: s.face, el: b, wiggle };
     });
