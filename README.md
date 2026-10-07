@@ -15,12 +15,13 @@ It follows two rules:
 - **Turning a piece**: tap a piece and a round yellow handle appears at its corner; drag the handle to turn it (or use the left and right arrow keys). Turning a glued piece leaves glue behind, like moving it does.
 - **Tape**: pull a strip across the card, plain or printed. It sticks at once and holds down whatever is under it. Peeling it off leaves no glue but tears the paper a little.
 - **Stamps**: six rubber stamps and three ink pads. Each press prints fainter; picking a pad (or a stamp) inks it again.
+- **Letters**: three sheets of sticker letters (black, red, blue). Peel a letter by tapping it, then tap the card to stick it. Each sticker exists once, so a sheet can run out of a letter.
 - **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card. The sound you touched last can be played slow or fast, and backwards, like a tape.
 - **The trash**: drag anything into it. Double-click to take the last thing back out, then click for the ones before it.
 - **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
 - **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound sway and glow, and play when tapped.
 
-The pictures in the boxes are placeholder drawings until you add your own: put JPG, PNG or WebP files in `public/materials/magazines` and `public/materials/paintings`, and each file becomes a sheet in that box. Letters, a copier, pins, flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
+The pictures in the boxes are placeholder drawings until you add your own: put JPG, PNG or WebP files in `public/materials/magazines` and `public/materials/paintings`, and each file becomes a sheet in that box. A copier, pins, flipping pieces and movement are listed in the tool rows as "soon" and are not built yet.
 
 ## Run it on your computer
 

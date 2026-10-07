@@ -290,17 +290,19 @@ function drag(el){
     if(!held)return;held=false;el.classList.remove('held');
     const moved=Math.hypot(el.offsetLeft-sx,el.offsetTop-sy)>12,left=wasGlued&&moved;
     if(!moved&&el._snd)hear(el._snd,el._tape);
-    if(left&&el.dataset.sticky){tear(el,sx,sy,sr);unglue(el);snd.rip();}
+    if(left&&el.dataset.peel){unglue(el);noise(.06,'highpass',3000,.15);}
+    else if(left&&el.dataset.sticky){tear(el,sx,sy,sr);unglue(el);snd.rip();}
     else if(left){residue(sx,sy,el,wasDry,sz);unglue(el);if(wasDry)snd.rip();}
     if(inside(el,bin,10)){toTrash(el);return;}
     if(inside(el,card,0)){
-      if(!el.dataset.glued&&el.dataset.sticky){el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');snd.glue();tell(left?'Peeled off and stuck down again. It tore the paper a little.':'Stuck down.');}
+      if(!el.dataset.glued&&(el.dataset.sticky||el.dataset.peel)){el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');snd.glue();tell(left&&el.dataset.sticky?'Peeled off and stuck down again. It tore the paper a little.':'Stuck down.');}
       else if(!el.dataset.glued){
         el.dataset.glued='1';el.dataset.face=face;el.classList.add('wet');snd.glue();$('cardhint').hidden=true;
         tell(left?'Moved. Some glue stayed where it was.':'Glued. The glue dries in 8 seconds.');
         el._t=setTimeout(()=>{el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');},DRY);
       }
-    }else if(left&&el.dataset.sticky){tell('Peeled off. It tore the paper a little.');}
+    }else if(left&&el.dataset.peel){tell('Peeled off.');}
+    else if(left&&el.dataset.sticky){tell('Peeled off. It tore the paper a little.');}
     else if(left){tell(wasDry?'Ripped off. A patch of dried glue stayed on the card.':'Peeled off. A smear of glue stayed on the card.');}
   };
   el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
@@ -325,6 +327,7 @@ function pick(el){picked=el;placeTurn();}
 /* turning a glued piece is moving it: the old glue stays behind and the piece is stuck down again, wet */
 function turned(el,wasGlued,wasDry,was){
   if(!wasGlued)return;
+  if(el.dataset.peel)return;
   if(el.dataset.sticky){tear(el,el.offsetLeft,el.offsetTop,was);snd.rip();return;}
   /* the old glue stays on the card, under the piece: the piece is lifted above it */
   residue(el.offsetLeft,el.offsetTop,el,wasDry,el.style.zIndex);el.style.zIndex=String(++z);unglue(el);if(wasDry)snd.rip();
@@ -397,7 +400,7 @@ const toolBtns=document.querySelectorAll('[data-tool]');
 toolBtns.forEach(b=>b.addEventListener('click',()=>{
   audio();tool=b.dataset.tool;
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
-  marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp');$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
+  marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');$('letteropts').hidden=tool!=='letter';$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
   app.classList.toggle('sounding',tool==='sound');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
@@ -445,6 +448,33 @@ function press1(p){
   const size=84*ku;
   wt.save();wt.translate(p[0],p[1]);wt.rotate((Math.random()-.5)*.2);wt.globalAlpha=Math.max(.1,inked);wt.drawImage(s,-size/2,-size/2,size,size);wt.restore();
   settle(1);snd.punch();inked=Math.max(.08,inked*.68);
+}
+/* ---------- sticker letters: three sheets, and every sticker on a sheet can be peeled off only once ---------- */
+const SUPPLY='AAAABBCCDDEEEEFFGGHHIIIJKLLMMNNÑOOOOPPQRRSSSTTUUUVWXYYZ0123456789!!??♥♥&.,';
+const SHEETS={};['black','red','blue'].forEach(c=>{SHEETS[c]={};for(const ch of SUPPLY)SHEETS[c][ch]=(SHEETS[c][ch]||0)+1;});
+let sheetOf='black',lifted=null;
+function drawSheet(){
+  const box=$('stickers');box.textContent='';box.style.setProperty('--ink',COLORS[sheetOf]);
+  [...new Set(SUPPLY)].forEach(ch=>{
+    const n=SHEETS[sheetOf][ch],b=document.createElement('button');b.type='button';b.textContent=ch;b.disabled=!n;
+    b.setAttribute('aria-label',n?ch+', '+n+' left':ch+', none left');b.setAttribute('aria-pressed',String(lifted===ch));
+    const c=document.createElement('small');c.textContent=n;c.setAttribute('aria-hidden','true');b.appendChild(c);
+    b.addEventListener('click',()=>{audio();lifted=lifted===ch?null:ch;noise(.04,'highpass',3000,.12);drawSheet();});
+    box.appendChild(b);
+  });
+}
+document.querySelectorAll('[data-sheet]').forEach(b=>b.addEventListener('click',()=>{audio();sheetOf=b.dataset.sheet;lifted=null;snd.tick();document.querySelectorAll('[data-sheet]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawSheet();}));
+drawSheet();
+function stickLetter(e){
+  if(!lifted||!SHEETS[sheetOf][lifted]){snd.tick();return;}
+  const F='900 46px "Arial Black",Impact,sans-serif',m=document.createElement('canvas').getContext('2d');m.font=F;
+  const w=Math.ceil(m.measureText(lifted).width)+18,h=66,k=2,cv=document.createElement('canvas');cv.width=w*k;cv.height=h*k;
+  const x=cv.getContext('2d');x.scale(k,k);x.font=F;x.textAlign='center';x.textBaseline='middle';x.lineJoin='round';
+  /* the white rim is the sticker's own backing, so a letter stays readable on any picture */
+  x.strokeStyle='#ffffff';x.lineWidth=11;x.strokeText(lifted,w/2,h/2+2);x.fillStyle=COLORS[sheetOf];x.fillText(lifted,w/2,h/2+2);
+  const a=app.getBoundingClientRect(),el=addPiece(cv,w,h,e.clientX-a.left-w/2,e.clientY-a.top-h/2);
+  el.dataset.peel='1';el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
+  SHEETS[sheetOf][lifted]--;tell('The letter '+lifted+', stuck down.');lifted=null;drawSheet();snd.glue();
 }
 /* ---------- sticky tape: pull a strip across the card; it sticks at once and becomes a piece like any other ---------- */
 const ROLLS={clear:'rgba(244,236,205,.55)',yellow:'rgba(247,209,23,.8)',red:'rgba(210,31,27,.8)',blue:'rgba(31,63,148,.8)',stripes:'rgba(251,250,245,.9)',dots:'rgba(247,209,23,.9)',grid:'rgba(251,250,245,.92)'},TAPE_W=34;
@@ -512,6 +542,7 @@ function stick(){
 }
 marks.addEventListener('pointerdown',e=>{
   audio();try{marks.setPointerCapture(e.pointerId);}catch(_){}
+  if(tool==='letter'){stickLetter(e);$('cardhint').hidden=true;e.preventDefault();return;}
   if(tool==='stamp'){ku=MW/marks.getBoundingClientRect().width;press1(mpos(e));$('cardhint').hidden=true;e.preventDefault();return;}
   if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0};$('cardhint').hidden=true;e.preventDefault();return;}
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;e.preventDefault();

@@ -74,7 +74,7 @@
       <button type="button" data-tool="sound" aria-pressed="false">SOUND</button>
       <button type="button" data-tool="tape" aria-pressed="false">TAPE</button>
       <button type="button" data-tool="stamp" aria-pressed="false">STAMPS</button>
-      <button type="button" class="soon" disabled>LETTERS<small>soon</small></button>
+      <button type="button" data-tool="letter" aria-pressed="false">LETTERS</button>
       <button type="button" class="soon" disabled>COPIER<small>soon</small></button>
       <button type="button" class="soon" disabled>PINS<small>soon</small></button>
       <button type="button" class="soon" disabled>FLIP<small>soon</small></button>
@@ -98,6 +98,14 @@
       <button type="button" class="k" data-pad="black" aria-pressed="true">BLACK INK</button>
       <button type="button" class="r" data-pad="red" aria-pressed="false">RED INK</button>
       <button type="button" class="b" data-pad="blue" aria-pressed="false">BLUE INK</button>
+    </div>
+    <div class="tools" id="letteropts" role="group" aria-label="Sheets of sticker letters" hidden>
+      <div id="sheets">
+        <button type="button" class="k" data-sheet="black" aria-pressed="true">BLACK SHEET</button>
+        <button type="button" class="r" data-sheet="red" aria-pressed="false">RED SHEET</button>
+        <button type="button" class="b" data-sheet="blue" aria-pressed="false">BLUE SHEET</button>
+      </div>
+      <div id="stickers"></div>
     </div>
     <div class="tools" id="tapeopts" role="group" aria-label="Rolls of tape" hidden>
       <button type="button" data-roll="clear" aria-pressed="true">CLEAR</button>
