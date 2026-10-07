@@ -17,7 +17,7 @@
       keep.textContent = label;
       keep.hidden = false;
       keep.addEventListener('click', () => {
-        window.CardViewer.keep({ faces, sounds: extras.sounds, opening: extras.opening }).then(
+        window.CardViewer.keep({ faces, sounds: extras.sounds, opening: extras.opening, openingTape: extras.openingTape }).then(
           () => (say.textContent = 'The card was saved as a file.'),
           () => {
             keep.textContent = 'COULD NOT SAVE IT. TRY AGAIN';
@@ -28,7 +28,7 @@
     }
     window.CardViewer.mount(
       document.getElementById('view'),
-      { faces, sounds: (extras && extras.sounds) || [], opening: (extras && extras.opening) || null },
+      { faces, sounds: (extras && extras.sounds) || [], opening: (extras && extras.opening) || null, openingTape: (extras && extras.openingTape) || null },
       (text) => {
         say.textContent = text;
       }

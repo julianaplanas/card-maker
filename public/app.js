@@ -288,7 +288,7 @@ function drag(el){
   const up=()=>{
     if(!held)return;held=false;el.classList.remove('held');
     const moved=Math.hypot(el.offsetLeft-sx,el.offsetTop-sy)>12,left=wasGlued&&moved;
-    if(!moved&&el._snd)hear(el._snd);
+    if(!moved&&el._snd)hear(el._snd,el._tape);
     if(left){residue(sx,sy,el,wasDry,sz);unglue(el);if(wasDry)snd.rip();}
     if(inside(el,bin,10)){toTrash(el);return;}
     if(inside(el,card,0)){
@@ -392,7 +392,7 @@ toolBtns.forEach(b=>b.addEventListener('click',()=>{
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
   marks.classList.toggle('on',PENS.includes(tool));$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
-  app.classList.toggle('sounding',tool==='sound');$('sndopts').hidden=tool!=='sound';
+  app.classList.toggle('sounding',tool==='sound');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
   tell(b.textContent.trim()+' picked up.');
 }));
@@ -446,7 +446,7 @@ function settle(){
 const mend=()=>{if(!mp)return;mp=null;settle();};
 marks.addEventListener('pointerup',mend);marks.addEventListener('pointercancel',mend);
 
-function toTrash(el){
+function toTrash(el){if(el===taped)showTape(null);
   if(picked===el)pick(null);
   unglue(el);el.remove();stack.push(el);count.textContent=String(stack.length);
   snd.trash();bin.classList.remove('shake');void bin.offsetWidth;bin.classList.add('shake');
@@ -521,7 +521,29 @@ function startRec(maxMs,done){
   return r;
 }
 let heard=null;
-function hear(url){try{if(heard)heard.pause();heard=new Audio(url);heard.play().catch(()=>{});}catch(e){}}
+function hear(url,tape){CardViewer.play(url,tape);}
+/* the tape controls work on whichever sound was touched last */
+let taped=null;
+function showTape(el){
+  if(taped)taped.classList.remove('taped');
+  taped=el&&(el===$('openrec')?opening:el._snd)?el:null;
+  $('tape').hidden=!taped;if(!taped)return;
+  taped.classList.add('taped');
+  const t=taped._tape||{};
+  document.querySelectorAll('#tape [data-rate]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.rate===(t.rate||1))));
+  $('back').setAttribute('aria-pressed',String(!!t.back));
+  $('ta').value=Math.round((t.a||0)*100);$('tb').value=Math.round((t.b==null?1:t.b)*100);
+}
+function setTape(change){
+  if(!taped)return;
+  const t=Object.assign({rate:1,back:false,a:0,b:1},taped._tape||{},change);
+  taped._tape=t;showTape(taped);snd.tick();
+  hear(taped===$('openrec')?opening:taped._snd,t);
+}
+document.querySelectorAll('#tape [data-rate]').forEach(b=>b.addEventListener('click',()=>{audio();setTape({rate:+b.dataset.rate});}));
+$('back').addEventListener('click',()=>{audio();setTape({back:!(taped&&taped._tape&&taped._tape.back)});});
+$('ta').addEventListener('change',()=>{const a=+$('ta').value/100,b=taped&&taped._tape&&taped._tape.b!=null?taped._tape.b:1;setTape({a:a,b:Math.max(b,a+.1)});});
+$('tb').addEventListener('change',()=>{const b=+$('tb').value/100,a=taped&&taped._tape?taped._tape.a||0:0;setTape({b:b,a:Math.min(a,b-.1)});});
 /* one press does both jobs: a quick tap plays what is there, holding records over it */
 function press(el,e,maxMs,get,set){
   e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}
@@ -534,8 +556,8 @@ function press(el,e,maxMs,get,set){
     began=Date.now();
     r=startRec(maxMs,url=>{
       el.classList.remove('rec');
-      if(url&&had&&Date.now()-began<700){micSay('Too short to replace the sound. The old one is kept.');hear(get());}
-      else if(url){set(url);snd.pop();micSay('Recorded. Tap it to hear it, hold to record again.');}
+      if(url&&had&&Date.now()-began<700){micSay('Too short to replace the sound. The old one is kept.');hear(get(),el._tape);}
+      else if(url){set(url);el._tape=null;showTape(el);snd.pop();micSay('Recorded. Tap it to hear it, hold to record again.');}
       else micSay('Nothing was recorded. Hold a little longer.',true);
     });
     if(r){el.classList.add('rec');micSay('Recording... let go to stop.');}
@@ -544,7 +566,7 @@ function press(el,e,maxMs,get,set){
   const up=()=>{
     over=true;clearTimeout(wait);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
     if(r){if(r.state==='recording')r.stop();}
-    else{const u=get();if(u)hear(u);else if(mic){snd.tick();micSay('Keep holding to record.');}}
+    else{const u=get();if(u){showTape(el);hear(u,el._tape);}else if(mic){snd.tick();micSay('Keep holding to record.');}}
   };
   el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
@@ -587,7 +609,7 @@ function loudPieces(){
   const out=[];
   [...layer.querySelectorAll('.piece')].filter(p=>p._snd&&p.dataset.face&&origin[p.dataset.face]).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
     const o=origin[p.dataset.face],w=parseFloat(p.style.width),h=parseFloat(p.style.height);
-    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd});
+    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd,t:p._tape||null});
   });
   return out;
 }
@@ -595,10 +617,10 @@ $('tryit').addEventListener('click',()=>{
   audio();micOff();
   const pic=c=>c.toDataURL('image/jpeg',0.85),all=['env','front','open'];
   shots={};flat={};all.forEach(f=>{shots[f]=render(f,false);flat[f]=pic(render(f,true));});
-  extras={sounds:loudPieces(),opening:opening};sealed=false;
+  extras={sounds:loudPieces(),opening:opening,openingTape:$('openrec')._tape||null};sealed=false;
   $('mailback').hidden=false;$('mailseal').hidden=false;$('maillink').hidden=true;
   mailcv.hidden=true;mailstage.hidden=false;mail.hidden=false;
-  viewer=CardViewer.mount(mailstage,{faces:flat,sounds:extras.sounds,opening:extras.opening},tell);
+  viewer=CardViewer.mount(mailstage,{faces:flat,sounds:extras.sounds,opening:extras.opening,openingTape:extras.openingTape},tell);
   noise(.12,'bandpass',700,.25);tell('The envelope, as they will get it. Tap it to open.');
 });
 $('mailback').addEventListener('click',()=>{audio();if(viewer)viewer.stop();mail.hidden=true;tell('Back at the table.');});
@@ -652,7 +674,7 @@ $('mailseal').addEventListener('click',()=>{
   const saved=saveCard().catch(()=>null);
   closeUp(()=>{snd.glue();saved.then(showSaved);});
 });
-$('keep').addEventListener('click',()=>{audio();CardViewer.keep({faces:{env:flat.env,front:flat.front,open:flat.open},sounds:extras.sounds,opening:extras.opening}).then(()=>tell('The card was saved as a file.'),()=>tell('The card could not be saved as a file.'));});
+$('keep').addEventListener('click',()=>{audio();CardViewer.keep({faces:{env:flat.env,front:flat.front,open:flat.open},sounds:extras.sounds,opening:extras.opening,openingTape:extras.openingTape}).then(()=>tell('The card was saved as a file.'),()=>tell('The card could not be saved as a file.'));});
 $('retry').addEventListener('click',()=>{audio();$('linktext').textContent='Saving...';$('retry').hidden=true;saveCard().catch(()=>null).then(showSaved);});
 $('share').addEventListener('click',()=>{if(navigator.share)navigator.share({url:$('linktext').textContent}).catch(()=>{});});
 $('copy').addEventListener('click',()=>{
@@ -666,8 +688,8 @@ function wipe(faces){
   faces.forEach(f=>{const b=BASES[f];b.getContext('2d').clearRect(0,0,b.width,b.height);});
   wt.clearRect(0,0,MW,MH);
 }
-$('again').addEventListener('click',()=>{audio();wipe(['front','open','env']);opening=null;$('openrec').classList.remove('loud');mail.hidden=true;setFace('front');tell('A new card. Your table is as you left it.');});
-function quiet(){opening=null;$('openrec').classList.remove('loud');}
+$('again').addEventListener('click',()=>{audio();wipe(['front','open','env']);quiet();mail.hidden=true;setFace('front');tell('A new card. Your table is as you left it.');});
+function quiet(){opening=null;$('openrec')._tape=null;$('openrec').classList.remove('loud');showTape(null);}
 $('newcard').addEventListener('click',()=>{audio();wipe(['front','open']);quiet();snd.rip();tell('A new, empty card.');});
 
 })();

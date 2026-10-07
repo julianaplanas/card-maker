@@ -34,13 +34,75 @@
   }
 
   let playing = null;
-  function play(url) {
+  let spinning = null;
+  let turn = 0;
+  const tapes = new Map();
+  function hush() {
+    turn++;
+    if (playing) playing.pause();
+    if (spinning) {
+      try {
+        spinning.stop();
+      } catch (e) {
+        /* already finished */
+      }
+      spinning = null;
+    }
+  }
+  function plain(url) {
     try {
-      if (playing) playing.pause();
       playing = new Audio(url);
       playing.play().catch(() => {});
     } catch (e) {
       /* this browser cannot play the recording */
+    }
+  }
+  function decode(url) {
+    if (!tapes.has(url)) {
+      const raw = atob(url.slice(url.indexOf(',') + 1));
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      tapes.set(url, new Promise((ok, no) => ac.decodeAudioData(bytes.buffer, ok, no)));
+    }
+    return tapes.get(url);
+  }
+  // A recording plays like a tape. t (optional) says how: { rate: speed, back: true for backwards, a and b: where it starts and ends, 0 to 1 }.
+  function play(url, t) {
+    hush();
+    t = t || {};
+    const rate = t.rate || 1;
+    const a = t.a > 0 ? t.a : 0;
+    const b = t.b < 1 ? t.b : 1;
+    if (!t.back && rate === 1 && a === 0 && b === 1) return plain(url);
+    const mine = turn;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+      decode(url).then(
+        (buf) => {
+          if (mine !== turn) return;
+          let tape = buf;
+          if (t.back) {
+            if (!buf.flipped) {
+              buf.flipped = ac.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
+              for (let c = 0; c < buf.numberOfChannels; c++) buf.flipped.getChannelData(c).set(Float32Array.from(buf.getChannelData(c)).reverse());
+            }
+            tape = buf.flipped;
+          }
+          const from = t.back ? 1 - b : a;
+          const src = ac.createBufferSource();
+          src.buffer = tape;
+          src.playbackRate.value = rate;
+          src.connect(ac.destination);
+          src.start(0, from * tape.duration, Math.max(0.05, (b - a) * tape.duration));
+          spinning = src;
+        },
+        () => {
+          if (mine === turn) plain(url); // this browser cannot take the recording apart, so it plays as recorded
+        }
+      );
+    } catch (e) {
+      plain(url);
     }
   }
 
@@ -77,7 +139,7 @@
         b.classList.add('cv-wig');
       };
       b.addEventListener('click', () => {
-        play(s.audio);
+        play(s.audio, s.t);
         wiggle();
       });
       // when the wiggle ends, go back to the gentle sway that marks a piece as having a sound
@@ -105,12 +167,12 @@
       const n = (at + 1) % STAGES.length;
       paper(n === 1 ? 1300 : 700, n === 1 ? 0.22 : 0.12);
       show(n, true);
-      if (n === 2 && data.opening) play(data.opening);
+      if (n === 2 && data.opening) play(data.opening, data.openingTape);
     });
     show(0, false);
     return {
       stop() {
-        if (playing) playing.pause();
+        hush();
       },
     };
   }
@@ -142,7 +204,7 @@
     return Promise.all([text('/viewer.js'), text('/style.css'), Promise.all(sides.map((s) => asData(data.faces[s])))]).then((got) => {
       const faces = {};
       sides.forEach((s, i) => (faces[s] = got[2][i]));
-      const card = JSON.stringify({ faces, sounds: data.sounds || [], opening: data.opening || null }).replace(/</g, '\\u003c');
+      const card = JSON.stringify({ faces, sounds: data.sounds || [], opening: data.opening || null, openingTape: data.openingTape || null }).replace(/</g, '\\u003c');
       const html =
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
         '<title>A card for you</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap">' +
@@ -160,5 +222,5 @@
     });
   }
 
-  window.CardViewer = { mount, keep, day };
+  window.CardViewer = { mount, keep, day, play };
 })();

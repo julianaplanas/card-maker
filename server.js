@@ -152,9 +152,19 @@ function readAudio(v) {
   return typeof v === 'string' && v.length <= MAX_AUDIO_CHARS && AUDIO.test(v) ? v : null;
 }
 
+// How a recording is played back: speed, direction, and where it starts and ends (0 to 1).
+function readTape(t) {
+  if (t == null || typeof t !== 'object') return null;
+  const rate = Number(t.rate) || 1;
+  const a = Number(t.a) || 0;
+  const b = t.b == null ? 1 : Number(t.b);
+  if (!(rate >= 0.4 && rate <= 2.5) || !(a >= 0 && a < b && b <= 1)) return null;
+  return { rate, back: !!t.back, a, b };
+}
+
 // Returns a cleaned copy holding only what the viewer needs, or null if anything looks wrong.
 function readExtras(raw) {
-  if (raw == null) return { sounds: [], opening: null };
+  if (raw == null) return { sounds: [], opening: null, openingTape: null };
   if (typeof raw !== 'object' || (raw.sounds != null && !Array.isArray(raw.sounds))) return null;
   const list = raw.sounds || [];
   if (list.length > MAX_SOUNDS) return null;
@@ -165,14 +175,14 @@ function readExtras(raw) {
     if (nums.some((n) => !Number.isFinite(n) || Math.abs(n) > 400)) return null;
     const audio = readAudio(s.audio);
     if (!audio || typeof s.img !== 'string' || s.img.length > MAX_PIECE_CHARS || !PNG.test(s.img)) return null;
-    sounds.push({ face: s.face, x: nums[0], y: nums[1], w: nums[2], h: nums[3], r: nums[4], img: s.img, audio });
+    sounds.push({ face: s.face, x: nums[0], y: nums[1], w: nums[2], h: nums[3], r: nums[4], img: s.img, audio, t: readTape(s.t) });
   }
   let opening = null;
   if (raw.opening != null) {
     opening = readAudio(raw.opening);
     if (!opening) return null;
   }
-  return { sounds, opening };
+  return { sounds, opening, openingTape: opening ? readTape(raw.openingTape) : null };
 }
 
 app.post('/api/cards', async (req, res) => {

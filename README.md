@@ -13,7 +13,7 @@ It follows two rules:
 - **Cutting a sheet**: scissors, tear, hole punch, and star and heart cutters.
 - **The card**: a front and an inside. Pens in three colors and three tips, glitter glue and white-out. Glue dries after 8 seconds.
 - **Turning a piece**: tap a piece and a round yellow handle appears at its corner; drag the handle to turn it (or use the left and right arrow keys). Turning a glued piece leaves glue behind, like moving it does.
-- **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card.
+- **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card. The sound you touched last can be played slow or fast, backwards, and with its start and end moved in, like a tape.
 - **The trash**: drag anything into it. Double-click to take the last thing back out, then click for the ones before it.
 - **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
 - **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound sway and glow, and play when tapped.
