@@ -457,13 +457,13 @@ function lay(it,x,y){
   const im=document.createElement('img');im.src=it.src;im.alt='';im.draggable=false;el.appendChild(im);
   el.style.width=it.w+'px';el.style.height=it.h+'px';el.style.left=(x-it.w/2)+'px';el.style.top=(y-it.h/2)+'px';
   el.style.setProperty('--r',(it.h>it.w*1.6?(Math.random()<.5?90:-90)+(Math.random()*50-25):Math.random()*40-20).toFixed(1)+'deg');
-  el.style.zIndex=String(++z);layer.appendChild(el);it.leakAt=Date.now();
+  el.style.zIndex=String(100000+ ++z);layer.appendChild(el);it.leakAt=Date.now();
   el.addEventListener('pointerdown',e=>{audio();e.preventDefault();carryTool(el,e,false);});
   return el;
 }
 function carryTool(el,e,fresh){
   try{el.setPointerCapture(e.pointerId);}catch(_){}
-  const ox=e.clientX-el.offsetLeft,oy=e.clientY-el.offsetTop,sx=e.clientX,sy=e.clientY,it=el._item;let moved=false;el.style.zIndex=String(++z);
+  const ox=e.clientX-el.offsetLeft,oy=e.clientY-el.offsetTop,sx=e.clientX,sy=e.clientY,it=el._item;let moved=false;el.style.zIndex=String(100000+ ++z);
   const mv=ev=>{if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>6)moved=true;if(moved){el.style.left=(ev.clientX-ox)+'px';el.style.top=(ev.clientY-oy)+'px';}};
   const up=()=>{
     el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
@@ -577,6 +577,13 @@ function setTool(t){
   app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
   place();
+}
+/* the tool in your hand travels with it: beside the pointer while you draw or stamp, and at the end of the strip while you pull tape */
+function follow(e){
+  const it=holding;if(!it||it.machine||!it.el||!it.el.isConnected)return;
+  const a=app.getBoundingClientRect(),c=card.getBoundingClientRect(),x=Math.max(c.left,Math.min(c.right,e.clientX))-a.left,y=Math.max(c.top,Math.min(c.bottom,e.clientY))-a.top;
+  if(it.kind==='tape'){it.el.style.left=(x-it.w*.34)+'px';it.el.style.top=(y-it.h/2)+'px';it.el.style.setProperty('--r','0deg');}
+  else{const d=Math.max(it.w,it.h)*.5+14;it.el.style.left=(x+d*.75-it.w/2)+'px';it.el.style.top=(y-d*.75-it.h/2)+'px';}
 }
 function mpos(e){const r=marks.getBoundingClientRect();return [(e.clientX-r.left)*MW/r.width,(e.clientY-r.top)*MH/r.height];}
 let ku=2,tip=1;
@@ -878,7 +885,8 @@ kit($('rolls'),Object.keys(ROLLS).map(k=>{
   return {name:k+' tape',art:c,data:{roll:k},tool:'tape',kind:'tape'};
 }),it=>{roll=it.data.roll;},'tape');
 function pulling(e){
-  pull.x1=e.clientX;pull.y1=e.clientY;const p=mpos(e);
+  const cr=card.getBoundingClientRect(),cx=Math.max(cr.left+2,Math.min(cr.right-2,e.clientX)),cy=Math.max(cr.top+2,Math.min(cr.bottom-2,e.clientY));
+  pull.x1=cx;pull.y1=cy;const p=mpos({clientX:cx,clientY:cy});
   wt.clearRect(0,0,MW,MH);wt.lineCap='butt';wt.lineWidth=TAPE_W*ku;wt.strokeStyle=ROLLS[roll];
   wt.beginPath();wt.moveTo(pull.p[0],pull.p[1]);wt.lineTo(p[0],p[1]);wt.stroke();
   const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d-pull.said>40){pull.said=d;noise(.05,'highpass',2500,.12);}
@@ -905,12 +913,14 @@ function stick(){
 }
 marks.addEventListener('pointerdown',e=>{
   audio();try{marks.setPointerCapture(e.pointerId);}catch(_){}
+  follow(e);
   if(tool==='letter'){stickLetter(e);$('cardhint').hidden=true;e.preventDefault();return;}
   if(tool==='stamp'){ku=MW/marks.getBoundingClientRect().width;press1(mpos(e));$('cardhint').hidden=true;e.preventDefault();return;}
   if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0};$('cardhint').hidden=true;e.preventDefault();return;}
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;e.preventDefault();
 });
 marks.addEventListener('pointermove',e=>{
+  if(pull||mp)follow(e);
   if(pull){pulling(e);return;}
   if(!mp)return;const p=mpos(e),d=Math.hypot(p[0]-mp[0],p[1]-mp[1]);if(d<3)return;
   seg(mp,p);mp=p;mtrav+=d;if(mtrav>70){mtrav=0;snd.mark();}
@@ -948,7 +958,7 @@ function toTrash(el){if(el===taped)showTape(null);
 function popTrash(){
   if(!stack.length){snd.tick();tell('The trash is empty.');return;}
   if(stack[stack.length-1].sheet){const t=stack.pop();delete BOXES[t.box].gone[t.i];count.textContent=String(stack.length);snd.pop();show(t.box,t.i);return;}
-  if(stack[stack.length-1]._item){const el=stack.pop(),b=bin.getBoundingClientRect(),a=app.getBoundingClientRect();const t=$('table').getBoundingClientRect();el.style.left=(t.left-a.left+40+Math.random()*Math.max(20,t.width-160))+'px';el.style.top=(t.top-a.top+80+Math.random()*Math.max(20,t.height-220))+'px';el.style.zIndex=String(++z);layer.appendChild(el);el._item.leakAt=Date.now();count.textContent=String(stack.length);snd.pop();tell('Taken out of the trash.');return;}
+  if(stack[stack.length-1]._item){const el=stack.pop(),b=bin.getBoundingClientRect(),a=app.getBoundingClientRect();const t=$('table').getBoundingClientRect();el.style.left=(t.left-a.left+40+Math.random()*Math.max(20,t.width-160))+'px';el.style.top=(t.top-a.top+80+Math.random()*Math.max(20,t.height-220))+'px';el.style.zIndex=String(100000+ ++z);layer.appendChild(el);el._item.leakAt=Date.now();count.textContent=String(stack.length);snd.pop();tell('Taken out of the trash.');return;}
   const el=stack.pop(),b=bin.getBoundingClientRect(),a=app.getBoundingClientRect(),w=parseFloat(el.style.width)||40;
   const x=Math.max(0,b.left-a.left-w*0.6-Math.random()*40),y=Math.max(0,b.top-a.top-20+Math.random()*50);
   addPiece(el,parseFloat(el.style.width),parseFloat(el.style.height),x,y);
