@@ -286,8 +286,9 @@ function drag(el){
     if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
     if(tool==='copy'){copyPiece(el);e.preventDefault();return;}
     if(pinned(el)){el.classList.remove('stuck');void el.offsetWidth;el.classList.add('stuck');snd.tick();tell('Held down by tape.');e.preventDefault();return;}
-    if(el._pin&&onPin(el,e)){e.preventDefault();pullPin(el,e);return;}
-    if(el._pin&&el.dataset.glued){spin(el,e);return;}
+    const head=el._pins&&onPin(el,e);if(head){e.preventDefault();pullPin(el,e,head);return;}
+    if(spins(el)&&el.dataset.glued){spin(el,e);return;}
+    if(el._pin){el.classList.remove('stuck');void el.offsetWidth;el.classList.add('stuck');snd.tick();tell('Held by its pins.');e.preventDefault();return;}
     pick(el);
     sx=el.offsetLeft;sr=angleOf(el);sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
     held=true;try{el.setPointerCapture(e.pointerId);}catch(_){}
@@ -469,8 +470,10 @@ function seg(a,b){
   }
 }
 /* ---------- pins: a brass pin through a piece fixes it to the card at that point, and the piece turns around it ---------- */
-function pinPoint(el){
-  const w=parseFloat(el.style.width),h=parseFloat(el.style.height),r=angleOf(el)*Math.PI/180,lx=(el._pin.x-.5)*w,ly=(el._pin.y-.5)*h;
+/* a piece with one pin turns around it; with two or more it is fixed in place */
+function spins(el){return !!(el._pins&&el._pins.length===1);}
+function pinPoint(el,p){
+  p=p||el._pin;const w=parseFloat(el.style.width),h=parseFloat(el.style.height),r=angleOf(el)*Math.PI/180,lx=(p.x-.5)*w,ly=(p.y-.5)*h;
   return [el.offsetLeft+w/2+Math.cos(r)*lx-Math.sin(r)*ly,el.offsetTop+h/2+Math.sin(r)*lx+Math.cos(r)*ly];
 }
 const PINKINDS=['brass','brass','red','blue','yellow','green','star','heart','pearl','black'];
@@ -498,7 +501,7 @@ function carry(pin,e){
   const up=ev=>{
     document.removeEventListener('pointermove',at);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);fly.remove();
     const el=ev.type==='pointerup'&&document.elementsFromPoint(ev.clientX,ev.clientY).find(n=>n.classList&&n.classList.contains('piece'));
-    if(el&&el.dataset.glued&&!el._pin&&pinDown(el,ev,pin))return;
+    if(el&&el.dataset.glued&&pinDown(el,ev,pin))return;
     PINS_IN[pin.slot].classList.remove('out');snd.tick();tell('The pin is back in its box.');
   };
   document.addEventListener('pointermove',at);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
@@ -511,23 +514,24 @@ function pinDown(el,e,pin){
   /* what is under the pin head is kept, so pulling the pin out shows it again, with a hole */
   let patch=null;try{patch=x.getImageData(Math.round(cx)-B,Math.round(cy)-B,B*2,B*2);}catch(_){}
   x.save();x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.globalAlpha=1;drawPin(x,pin.kind,cx,cy,R);x.restore();
-  el._pin={x:lx/w,y:ly/h,kind:pin.kind,slot:pin.slot,patch:patch,px:Math.round(cx)-B,py:Math.round(cy)-B,R:R};
+  (el._pins=el._pins||[]).push({x:lx/w,y:ly/h,kind:pin.kind,slot:pin.slot,patch:patch,px:Math.round(cx)-B,py:Math.round(cy)-B,R:R});el._pin=el._pins[0];
   el.dataset.pinned='1';clearTimeout(el._t);el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');
-  if(picked===el)pick(null);snd.punch();tell('Pinned. It turns around the pin now.');return true;
+  if(picked===el)pick(null);snd.punch();tell(spins(el)?'Pinned. It turns around the pin now.':'Pinned again. It cannot turn any more.');return true;
 }
 function onPin(el,e){
-  const a=app.getBoundingClientRect(),P=pinPoint(el);return Math.hypot(e.clientX-a.left-P[0],e.clientY-a.top-P[1])<=Math.max(12,el._pin.R*parseFloat(el.style.width)/el.width+5);
+  const a=app.getBoundingClientRect();
+  return [...el._pins].reverse().find(p=>{const P=pinPoint(el,p);return Math.hypot(e.clientX-a.left-P[0],e.clientY-a.top-P[1])<=Math.max(12,p.R*parseFloat(el.style.width)/el.width+5);})||null;
 }
 /* pulling a pin out: the piece is free again (still glued where it lies), and a small hole stays in it and in the card */
-function pullPin(el,e){
-  const p=el._pin,x=el.getContext('2d'),k=el.width/parseFloat(el.style.width),cx=p.x*el.width,cy=p.y*el.height,P=pinPoint(el);
+function pullPin(el,e,p){
+  const x=el.getContext('2d'),k=el.width/parseFloat(el.style.width),cx=p.x*el.width,cy=p.y*el.height,P=pinPoint(el,p);
   x.save();x.setTransform(1,0,0,1,0,0);
   if(p.patch)x.putImageData(p.patch,p.px,p.py);
   x.globalCompositeOperation='destination-out';x.beginPath();x.arc(cx,cy,1.7*k,0,7);x.fill();
   x.globalCompositeOperation='source-atop';x.beginPath();x.arc(cx,cy,2.9*k,0,7);x.lineWidth=.9*k;x.strokeStyle='rgba(17,17,17,.3)';x.stroke();x.restore();
   const c=card.getBoundingClientRect(),a=app.getBoundingClientRect(),q=MW/c.width,hx=(P[0]-(c.left-a.left))*q,hy=(P[1]-(c.top-a.top))*q;
   mk.save();mk.beginPath();mk.arc(hx,hy,1.7*q,0,7);mk.fillStyle='#3a3630';mk.fill();mk.restore();
-  delete el._pin;delete el.dataset.pinned;noise(.05,'highpass',2500,.2);
+  el._pins.splice(el._pins.indexOf(p),1);el._pin=el._pins[0]||null;if(!el._pin){delete el._pin;delete el._pins;delete el.dataset.pinned;}noise(.05,'highpass',2500,.2);
   carry({kind:p.kind,slot:p.slot},e);
 }
 function spin(el,e){
@@ -898,7 +902,7 @@ function render(f,quietOnly){
   const o=origin[f];
   if(o){
     const k=cw/o.w;
-    [...layer.querySelectorAll('.piece,.goo')].filter(p=>p.dataset.face===f&&!(quietOnly&&(p._snd||p._pin))).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
+    [...layer.querySelectorAll('.piece,.goo')].filter(p=>p.dataset.face===f&&!(quietOnly&&(p._snd||spins(p)))).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
       const w=parseFloat(p.style.width),h=parseFloat(p.style.height),x=parseFloat(p.style.left)-o.x,y=parseFloat(p.style.top)-o.y;
       c.save();c.scale(k,k);c.translate(x+w/2,y+h/2);
       if(p.classList.contains('goo')){c.fillStyle=p.style.background;c.beginPath();c.ellipse(0,0,w/2,h/2,0,0,7);c.fill();}
@@ -913,9 +917,9 @@ const mail=$('mail'),mailcv=$('mailcv'),mailstage=$('mailstage');
 let shots=null,flat=null,extras=null,viewer=null,sealed=false;
 function loudPieces(){
   const out=[];
-  [...layer.querySelectorAll('.piece')].filter(p=>(p._snd||p._pin)&&p.dataset.face&&origin[p.dataset.face]).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
+  [...layer.querySelectorAll('.piece')].filter(p=>(p._snd||spins(p))&&p.dataset.face&&origin[p.dataset.face]).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
     const o=origin[p.dataset.face],w=parseFloat(p.style.width),h=parseFloat(p.style.height);
-    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd||null,t:p._tape||null,pin:p._pin?{x:p._pin.x,y:p._pin.y}:null});
+    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd||null,t:p._tape||null,pin:spins(p)?{x:p._pin.x,y:p._pin.y}:null});
   });
   return out;
 }
