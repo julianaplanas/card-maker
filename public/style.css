@@ -217,3 +217,18 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 #rolls{background-color:#e4dccb}
 #stampopts,#tapeopts{display:block}
 #stampopts .kit button[aria-pressed=true],#tapeopts .kit button[aria-pressed=true]{outline:none;background:none}
+/* ---------- tools live in boxes on a shelf; what you take out stays out until you put it back ---------- */
+#cardtools{display:none!important}
+@media (min-width:1100px){#cardcell{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "card" "env" "opts" "snd"}}
+#kits{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px}
+.kitbox{position:relative;z-index:6;min-height:54px;padding:16px 14px 6px;background:#c9a66b;color:var(--line);border:3px solid var(--paper);box-shadow:inset 0 12px 0 #8a6a3a;font-weight:700;font-size:14px}
+.kitbox:nth-child(3n+1){background:var(--yellow);box-shadow:inset 0 12px 0 #c9a70f}
+.kitbox:nth-child(3n+2){background:#8fc1e3;box-shadow:inset 0 12px 0 #5c94bb}
+.kitbox[aria-expanded=true]{box-shadow:inset 0 3px 0 rgba(17,17,17,.35);padding-top:7px;translate:0 4px}
+#inhand{min-height:52px;padding:4px 12px;background:var(--paper);border:3px dashed var(--line);display:flex;align-items:center;justify-content:center}
+#inhand img{max-height:44px;max-width:120px;width:auto;height:auto;display:block}
+.kit button.out,#pencase button.out{cursor:default;translate:none}
+.kit button.out>*,#pencase button.out>*{opacity:.13;filter:grayscale(1)}
+.loose{position:absolute;pointer-events:auto;touch-action:none;cursor:grab;transform:rotate(var(--r,0deg));filter:drop-shadow(3px 4px 0 rgba(17,17,17,.3));-webkit-user-select:none;user-select:none}
+.loose img{display:block;width:100%;height:100%;pointer-events:none}
+.spill{position:absolute;pointer-events:none;z-index:5}

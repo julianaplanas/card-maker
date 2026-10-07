@@ -24,6 +24,17 @@
       <svg width="52" height="60" viewBox="0 0 52 60" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="square" aria-hidden="true"><path d="M4 14h44M18 14V6h16v8M9 14l4 42h26l4-42M21 24v22M31 24v22"/></svg>
       <span>TRASH: <span id="count">0</span></span>
     </button>
+    <div id="kits" role="group" aria-label="Boxes of tools">
+      <button type="button" class="kitbox" data-kit="pens" aria-expanded="false">PENS</button>
+      <button type="button" class="kitbox" data-kit="glitter" aria-expanded="false">GLITTER</button>
+      <button type="button" class="kitbox" data-kit="white" aria-expanded="false">WHITE-OUT</button>
+      <button type="button" class="kitbox" data-kit="tape" aria-expanded="false">TAPE</button>
+      <button type="button" class="kitbox" data-kit="stamps" aria-expanded="false">STAMPS</button>
+      <button type="button" class="kitbox" data-kit="stickers" aria-expanded="false">STICKERS</button>
+      <button type="button" class="kitbox" data-kit="pins" aria-expanded="false">PINS</button>
+      <button type="button" class="kitbox" data-kit="copier" aria-expanded="false">COPIER</button>
+      <button type="button" class="kitbox" data-kit="recorder" aria-expanded="false">RECORDER</button>
+    </div>
   </div>
   <p id="say" class="sr" role="status"></p>
 
@@ -49,6 +60,7 @@
   <section class="cell work" id="cardcell" aria-label="The card">
     <div class="cardhead">
       <h2>THE CARD</h2>
+      <button type="button" id="inhand" hidden></button>
       <div class="faces" role="group" aria-label="Which side of the card">
         <button type="button" data-face="front" aria-pressed="true">FRONT</button>
         <button type="button" data-face="open" aria-pressed="false">OPEN</button>
