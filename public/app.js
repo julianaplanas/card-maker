@@ -798,7 +798,19 @@ function drawSheet(){
     const b=document.createElement('button');b.type='button';b.disabled=st.used;
     b.setAttribute('aria-label',st.used?st.ch+', already used':st.ch);b.setAttribute('aria-pressed',String(lifted===st));
     const im=document.createElement('img');im.src=st.url;im.alt='';b.appendChild(im);
-    b.addEventListener('click',()=>{audio();const was=lifted;lifted=null;if(was!==st){holdMachine('letter','a sticker, '+st.ch,st.url);lifted=st;}else if(holding&&holding.tool==='letter')dropHold();noise(.04,'highpass',3000,.12);drawSheet();});
+    /* peel it off the sheet and carry it: it sticks where it is let go on the card, and goes back to its place anywhere else */
+    b.addEventListener('pointerdown',e=>{
+      if(st.used)return;audio();e.preventDefault();noise(.04,'highpass',3000,.12);
+      const w=st.cv._w,h=st.cv._h,fly=document.createElement('img');fly.src=st.url;fly.alt='';fly.className='stfly';fly.style.width=w+'px';fly.style.height=h+'px';layer.appendChild(fly);im.style.visibility='hidden';
+      const at=ev=>{const a=app.getBoundingClientRect();fly.style.left=(ev.clientX-a.left-w/2)+'px';fly.style.top=(ev.clientY-a.top-h/2)+'px';};at(e);
+      const up=ev=>{
+        document.removeEventListener('pointermove',at);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);fly.remove();
+        const c=card.getBoundingClientRect();
+        if(ev.type==='pointerup'&&ev.clientX>c.left&&ev.clientX<c.right&&ev.clientY>c.top&&ev.clientY<c.bottom){lifted=st;stickLetter(ev);}
+        else{im.style.visibility='';snd.tick();}
+      };
+      document.addEventListener('pointermove',at);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
+    });
     box.appendChild(b);
   });
 }
@@ -809,7 +821,7 @@ function stickLetter(e){
   if(!lifted||lifted.used){snd.tick();return;}
   const cv=lifted.cv,w=cv._w,h=cv._h,a=app.getBoundingClientRect(),el=addPiece(cv,w,h,e.clientX-a.left-w/2,e.clientY-a.top-h/2);
   el.dataset.peel='1';el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
-  lifted.used=true;tell('The letter '+lifted.ch+', stuck down.');lifted=null;drawSheet();snd.glue();dropHold();
+  lifted.used=true;tell('The letter '+lifted.ch+', stuck down.');lifted=null;drawSheet();snd.glue();$('cardhint').hidden=true;
 }
 /* ---------- sticky tape: pull a strip across the card; it sticks at once and becomes a piece like any other ---------- */
 const ROLLS={clear:'rgba(244,236,205,.55)',yellow:'rgba(247,209,23,.8)',red:'rgba(210,31,27,.8)',blue:'rgba(31,63,148,.8)',stripes:'rgba(251,250,245,.9)',dots:'rgba(247,209,23,.9)',grid:'rgba(251,250,245,.92)'},TAPE_W=34;

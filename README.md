@@ -15,7 +15,7 @@ It follows two rules:
 - **Turning a piece**: tap a piece and a round yellow handle appears at its corner; drag the handle to turn it (or use the left and right arrow keys). Turning a glued piece leaves glue behind, like moving it does.
 - **Tape**: pull a strip across the card, plain or printed. It sticks at once and holds down whatever is under it. Peeling it off leaves no glue but tears the paper a little.
 - **Stamps**: six rubber stamps and three ink pads. Each press prints fainter; picking a pad (or a stamp) inks it again.
-- **Letters**: three sheets of sticker letters (glitter, bubble, tiles). Every sticker is shown on its sheet; tap one to peel it, then tap the card to stick it. Each exists once, so a sheet can run out of a letter.
+- **Letters**: three sheets of sticker letters (glitter, bubble, tiles). Every sticker is shown on its sheet; drag one off the sheet and let go over the card to stick it. Each exists once, so a sheet can run out of a letter.
 - **Copier**: tap any piece and a black-and-white copy of it comes out onto the table. A copy of a copy comes out worse.
 - **Pins**: a box of pins. Drag one onto a piece on the card: the piece then turns around its pin, and whoever opens the card can spin it too. Drag the pin off again and it leaves a small hole.
 - **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card. The sound you touched last can be played slow or fast, and backwards, like a tape.
