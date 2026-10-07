@@ -480,8 +480,8 @@ function carryTool(el,e,fresh){
       el.remove();it.el=null;it.out+=Date.now()-it.t0;it.t0=null;it.btn.classList.remove('out');snd.tick();tell(it.name+', back in its box.');return;
     }
     it.leakAt=Date.now();
-    /* carried out of its box, it is in your hand; carried off the card afterwards, it is put down and your hand is empty */
-    if(fresh)activate(it);else if(holding===it&&!inside(el,card,0)){putDown();snd.tick();}
+    /* carried out of its box or onto the card, it is in your hand; carried off the card, it is put down and your hand is empty */
+    if(fresh||inside(el,card,0))activate(it);else if(holding===it){putDown();snd.tick();}
   };
   el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
@@ -920,8 +920,8 @@ function stick(){
 }
 marks.addEventListener('pointerdown',e=>{
   audio();
-  /* a tool lying on the card is still a thing you can take hold of, even while you are drawing */
-  const lying=[...layer.querySelectorAll('.loose')].sort((p,q)=>(+q.style.zIndex||0)-(+p.style.zIndex||0)).find(el=>{const r=el.getBoundingClientRect();return e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom;});
+  /* another tool lying on the card is still a thing you can take hold of while you draw; the one in your hand never gets in its own way */
+  const lying=[...layer.querySelectorAll('.loose')].sort((p,q)=>(+q.style.zIndex||0)-(+p.style.zIndex||0)).find(el=>{if(holding&&holding.el===el)return false;const r=el.getBoundingClientRect();return e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom;});
   if(lying){e.preventDefault();carryTool(lying,e,false);return;}
   try{marks.setPointerCapture(e.pointerId);}catch(_){}
   follow(e);
