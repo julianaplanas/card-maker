@@ -189,8 +189,6 @@ document.querySelectorAll('[data-box]').forEach(b=>b.addEventListener('click',()
   sheetEl.addEventListener('pointerup',up);sheetEl.addEventListener('pointercancel',up);
   grip.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();putBack();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();trashSheet();}});
 })();
-const colorBtns=document.querySelectorAll('[data-color]');
-colorBtns.forEach(b=>b.addEventListener('click',()=>{audio();penColor=b.dataset.color;colorBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('penbtn').className=b.className;tell(b.textContent.trim()+' pen.');}));
 const tipBtns=document.querySelectorAll('[data-size]');
 tipBtns.forEach(b=>b.addEventListener('click',()=>{audio();tip=parseFloat(b.dataset.size);tipBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));tell(b.textContent.trim()+' picked.');}));
 const cutBtns=document.querySelectorAll('[data-cut]');
@@ -287,8 +285,8 @@ function drag(el){
     audio();
     if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
     if(tool==='copy'){copyPiece(el);e.preventDefault();return;}
-    if(tool==='pin'){pinDown(el,e);e.preventDefault();return;}
     if(pinned(el)){el.classList.remove('stuck');void el.offsetWidth;el.classList.add('stuck');snd.tick();tell('Held down by tape.');e.preventDefault();return;}
+    if(el._pin&&onPin(el,e)){e.preventDefault();pullPin(el,e);return;}
     if(el._pin&&el.dataset.glued){spin(el,e);return;}
     pick(el);
     sx=el.offsetLeft;sr=angleOf(el);sy=el.offsetTop;sz=el.style.zIndex;wasGlued=!!el.dataset.glued;wasDry=!!el.dataset.dry;
@@ -404,14 +402,41 @@ function place(){
 }
 place();window.addEventListener('resize',place);
 if(window.ResizeObserver)new ResizeObserver(place).observe(app);
-const PENS=['pen','glitter','white'];let penColor='black';
+const PENS=['pen','glitter','white'];
+/* ---------- the pencil case: fine markers, fat markers and crayons, each drawn as the thing itself ---------- */
+const INKSET=[['black','#111111'],['red','#d21f1b'],['blue','#1f3f94'],['yellow','#f7c600'],['green','#1f9d55'],['pink','#ff4fa3'],['orange','#ff7a1a'],['purple','#7a3fd0']];
+const CASE=[{kind:'fine',name:'Fine marker',tip:.5,w:22,h:96},{kind:'fat',name:'Fat marker',tip:2.4,w:36,h:104},{kind:'crayon',name:'Crayon',tip:1.5,w:20,h:86}];
+function toolArt(kind,c,w,h){
+  const d=shade(c,.62),l=shade(c,1.3),o=' stroke="#111" stroke-width="1.5"';
+  let g='';
+  if(kind==='crayon'){
+    g='<path d="M'+(w/2-3)+' 2h6l4 16H'+(w/2-7)+'z" fill="'+c+'"'+o+'/><rect x="2" y="18" width="'+(w-4)+'" height="'+(h-20)+'" fill="'+c+'"'+o+'/>'
+     +'<rect x="2" y="30" width="'+(w-4)+'" height="'+(h-44)+'" fill="'+l+'"'+o+'/><path d="M2 38q'+(w/4-1)+' -5 '+(w/2-2)+' 0t'+(w/2-2)+' 0M2 '+(h-22)+'q'+(w/4-1)+' -5 '+(w/2-2)+' 0t'+(w/2-2)+' 0" fill="none" stroke="'+d+'" stroke-width="2"/>';
+  }else{
+    const cap=kind==='fat'?40:34;
+    g='<rect x="2" y="'+(cap-4)+'" width="'+(w-4)+'" height="'+(h-cap+2)+'" rx="3" fill="#f4f1e8"'+o+'/><rect x="2" y="'+(cap+10)+'" width="'+(w-4)+'" height="'+(kind==='fat'?26:20)+'" fill="'+c+'"/>'
+     +'<rect x="2" y="'+(h-12)+'" width="'+(w-4)+'" height="10" rx="3" fill="'+c+'"'+o+'/>'
+     +'<rect x="1" y="2" width="'+(w-2)+'" height="'+cap+'" rx="'+(kind==='fat'?5:6)+'" fill="'+c+'"'+o+'/><rect x="'+(w-8)+'" y="8" width="3" height="'+(cap-14)+'" fill="'+l+'"/><rect x="1" y="'+(cap-7)+'" width="'+(w-2)+'" height="5" fill="'+d+'"/>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+g+'</svg>';
+}
+let pen={kind:'fine',color:'#111111',tip:.5};
+CASE.forEach((t,ti)=>{
+  const row=document.createElement('div');row.className='row';
+  INKSET.forEach((c,ci)=>{
+    const b=document.createElement('button');b.type='button';b.innerHTML=toolArt(t.kind,c[1],t.w,t.h);b.setAttribute('aria-label',t.name+', '+c[0]);b.setAttribute('aria-pressed',String(!ti&&!ci));
+    b.addEventListener('click',()=>{audio();pen={kind:t.kind,color:c[1],tip:t.tip};snd.tick();$('pencase').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));tell(t.name+', '+c[0]+'.');});
+    row.appendChild(b);
+  });
+  $('pencase').appendChild(row);
+});
 let cutTool='scissors';
 let tool='hand',mp=null,mtrav=0;
 const toolBtns=document.querySelectorAll('[data-tool]');
 toolBtns.forEach(b=>b.addEventListener('click',()=>{
   audio();tool=b.dataset.tool;onTop(true);
   toolBtns.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
-  marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');$('letteropts').hidden=tool!=='letter';$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);colorBtns.forEach(c=>{c.hidden=tool!=='pen';});place();
+  marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');$('letteropts').hidden=tool!=='letter';$('pinopts').hidden=tool!=='pin';$('stampopts').hidden=tool!=='stamp';$('tapeopts').hidden=tool!=='tape';$('penopts').hidden=!PENS.includes(tool);$('pencase').hidden=tool!=='pen';tipBtns.forEach(c=>{c.hidden=tool==='pen';});place();
   wet.style.opacity=tool==='white'?'.85':'1';
   app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');app.classList.toggle('pinning',tool==='pin');$('sndopts').hidden=tool!=='sound';if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
@@ -432,26 +457,78 @@ function glit(a,b){
 function seg(a,b){
   if(tool==='glitter'){glit(a,b);return;}
   const w=tool==='white';
-  wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=(w?14:4.5)*ku*tip;wt.strokeStyle=w?'#ffffff':COLORS[penColor];
+  const size=tool==='pen'?pen.tip:tip,lw=(w?14:4.5)*ku*size;
+  wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=lw;wt.strokeStyle=w?'#ffffff':pen.color;
   wt.beginPath();wt.moveTo(a[0],a[1]);wt.lineTo(b[0],b[1]);wt.stroke();
+  if(tool==='pen'&&pen.kind==='crayon'){
+    /* wax skips over the grain of the paper */
+    wt.save();wt.globalCompositeOperation='destination-out';
+    const n=Math.max(3,Math.round(Math.hypot(b[0]-a[0],b[1]-a[1])*lw/14));
+    for(let i=0;i<n;i++){const t=Math.random(),g=(.6+Math.random()*1.6)*ku;wt.globalAlpha=.5+Math.random()*.5;wt.fillRect(a[0]+(b[0]-a[0])*t+(Math.random()-.5)*lw,a[1]+(b[1]-a[1])*t+(Math.random()-.5)*lw,g,g);}
+    wt.restore();
+  }
 }
 /* ---------- pins: a brass pin through a piece fixes it to the card at that point, and the piece turns around it ---------- */
 function pinPoint(el){
   const w=parseFloat(el.style.width),h=parseFloat(el.style.height),r=angleOf(el)*Math.PI/180,lx=(el._pin.x-.5)*w,ly=(el._pin.y-.5)*h;
   return [el.offsetLeft+w/2+Math.cos(r)*lx-Math.sin(r)*ly,el.offsetTop+h/2+Math.sin(r)*lx+Math.cos(r)*ly];
 }
-function pinDown(el,e){
-  if(el._pin||!el.dataset.glued){snd.tick();return;}
+const PINKINDS=['brass','brass','red','blue','yellow','green','star','heart','pearl','black'];
+function drawPin(x,kind,cx,cy,R){
+  const C={brass:'#d9a520',red:'#d21f1b',blue:'#1f3f94',yellow:'#f7d117',green:'#1f9d55',star:'#ff7a1a',heart:'#ff4fa3',pearl:'#f1ece0',black:'#2a2a2a'}[kind]||'#d9a520';
+  const body=()=>{x.beginPath();
+    if(kind==='star'){for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?R*.55:R*1.25;x.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}x.closePath();}
+    else if(kind==='heart'){const s=R/22;x.moveTo(cx,cy+26*s);x.bezierCurveTo(cx-44*s,cy-2*s,cx-20*s,cy-34*s,cx,cy-12*s);x.bezierCurveTo(cx+20*s,cy-34*s,cx+44*s,cy-2*s,cx,cy+26*s);}
+    else x.arc(cx,cy,R,0,7);};
+  x.save();x.translate(R*.14,R*.22);body();x.fillStyle='rgba(17,17,17,.35)';x.fill();x.restore();
+  const g=x.createRadialGradient(cx-R*.35,cy-R*.4,R*.08,cx,cy,R*1.25);g.addColorStop(0,'#ffffff');g.addColorStop(.3,shade(C,1.25));g.addColorStop(.7,C);g.addColorStop(1,shade(C,.5));
+  body();x.fillStyle=g;x.fill();x.lineWidth=Math.max(1,R*.14);x.strokeStyle=shade(C,.4);x.stroke();
+  if(kind==='brass'){x.beginPath();x.moveTo(cx-R*.5,cy);x.lineTo(cx+R*.5,cy);x.strokeStyle='rgba(90,63,5,.7)';x.stroke();}
+}
+const PINS_IN=PINKINDS.map((kind,i)=>{
+  const b=document.createElement('button');b.type='button';b.setAttribute('aria-label','A '+kind+' pin');
+  const c=document.createElement('canvas');c.width=c.height=80;drawPin(c.getContext('2d'),kind,40,40,kind==='brass'?30:25);b.appendChild(c);
+  b.addEventListener('pointerdown',e=>{if(b.classList.contains('out'))return;audio();e.preventDefault();b.classList.add('out');carry({kind:kind,slot:i},e);});
+  $('pinbox').appendChild(b);return b;
+});
+/* a pin in the air: it follows the pointer, and goes into the piece it is let go over, or back into its place in the box */
+function carry(pin,e){
+  const fly=document.createElement('canvas');fly.id='pinfly';fly.width=fly.height=80;drawPin(fly.getContext('2d'),pin.kind,40,40,pin.kind==='brass'?30:25);layer.appendChild(fly);
+  const at=ev=>{const a=app.getBoundingClientRect();fly.style.left=(ev.clientX-a.left-20)+'px';fly.style.top=(ev.clientY-a.top-26)+'px';};at(e);
+  const up=ev=>{
+    document.removeEventListener('pointermove',at);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);fly.remove();
+    const el=ev.type==='pointerup'&&document.elementsFromPoint(ev.clientX,ev.clientY).find(n=>n.classList&&n.classList.contains('piece'));
+    if(el&&el.dataset.glued&&!el._pin&&pinDown(el,ev,pin))return;
+    PINS_IN[pin.slot].classList.remove('out');snd.tick();tell('The pin is back in its box.');
+  };
+  document.addEventListener('pointermove',at);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
+}
+function pinDown(el,e,pin){
   const w=parseFloat(el.style.width),h=parseFloat(el.style.height),a=app.getBoundingClientRect(),r=-angleOf(el)*Math.PI/180;
   const px=e.clientX-a.left-(el.offsetLeft+w/2),py=e.clientY-a.top-(el.offsetTop+h/2),lx=px*Math.cos(r)-py*Math.sin(r)+w/2,ly=px*Math.sin(r)+py*Math.cos(r)+h/2;
-  if(lx<0||ly<0||lx>w||ly>h){snd.tick();return;}
-  const x=el.getContext('2d'),k=el.width/w,cx=lx*k,cy=ly*k,R=7*k;
-  x.save();x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.globalAlpha=1;
-  const g=x.createRadialGradient(cx-R*.35,cy-R*.35,R*.1,cx,cy,R);g.addColorStop(0,'#fff3b0');g.addColorStop(.45,'#d9a520');g.addColorStop(1,'#7a5608');
-  x.beginPath();x.arc(cx+k,cy+1.5*k,R,0,7);x.fillStyle='rgba(17,17,17,.35)';x.fill();
-  x.beginPath();x.arc(cx,cy,R,0,7);x.fillStyle=g;x.fill();x.lineWidth=k;x.strokeStyle='#5a3f05';x.stroke();x.restore();
-  el._pin={x:lx/w,y:ly/h};el.dataset.pinned='1';clearTimeout(el._t);el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');
-  if(picked===el)pick(null);snd.punch();tell('Pinned. It turns around the pin now.');
+  if(lx<0||ly<0||lx>w||ly>h)return false;
+  const x=el.getContext('2d'),k=el.width/w,cx=lx*k,cy=ly*k,R=(pin.kind==='brass'?8:6.5)*k,B=Math.ceil(R*1.7);
+  /* what is under the pin head is kept, so pulling the pin out shows it again, with a hole */
+  let patch=null;try{patch=x.getImageData(Math.round(cx)-B,Math.round(cy)-B,B*2,B*2);}catch(_){}
+  x.save();x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.globalAlpha=1;drawPin(x,pin.kind,cx,cy,R);x.restore();
+  el._pin={x:lx/w,y:ly/h,kind:pin.kind,slot:pin.slot,patch:patch,px:Math.round(cx)-B,py:Math.round(cy)-B,R:R};
+  el.dataset.pinned='1';clearTimeout(el._t);el.dataset.dry='1';el.classList.remove('wet');el.classList.add('dry');
+  if(picked===el)pick(null);snd.punch();tell('Pinned. It turns around the pin now.');return true;
+}
+function onPin(el,e){
+  const a=app.getBoundingClientRect(),P=pinPoint(el);return Math.hypot(e.clientX-a.left-P[0],e.clientY-a.top-P[1])<=Math.max(12,el._pin.R*parseFloat(el.style.width)/el.width+5);
+}
+/* pulling a pin out: the piece is free again (still glued where it lies), and a small hole stays in it and in the card */
+function pullPin(el,e){
+  const p=el._pin,x=el.getContext('2d'),k=el.width/parseFloat(el.style.width),cx=p.x*el.width,cy=p.y*el.height,P=pinPoint(el);
+  x.save();x.setTransform(1,0,0,1,0,0);
+  if(p.patch)x.putImageData(p.patch,p.px,p.py);
+  x.globalCompositeOperation='destination-out';x.beginPath();x.arc(cx,cy,1.7*k,0,7);x.fill();
+  x.globalCompositeOperation='source-atop';x.beginPath();x.arc(cx,cy,2.9*k,0,7);x.lineWidth=.9*k;x.strokeStyle='rgba(17,17,17,.3)';x.stroke();x.restore();
+  const c=card.getBoundingClientRect(),a=app.getBoundingClientRect(),q=MW/c.width,hx=(P[0]-(c.left-a.left))*q,hy=(P[1]-(c.top-a.top))*q;
+  mk.save();mk.beginPath();mk.arc(hx,hy,1.7*q,0,7);mk.fillStyle='#3a3630';mk.fill();mk.restore();
+  delete el._pin;delete el.dataset.pinned;noise(.05,'highpass',2500,.2);
+  carry({kind:p.kind,slot:p.slot},e);
 }
 function spin(el,e){
   e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}
@@ -838,7 +915,7 @@ function loudPieces(){
   const out=[];
   [...layer.querySelectorAll('.piece')].filter(p=>(p._snd||p._pin)&&p.dataset.face&&origin[p.dataset.face]).sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(p=>{
     const o=origin[p.dataset.face],w=parseFloat(p.style.width),h=parseFloat(p.style.height);
-    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd||null,t:p._tape||null,pin:p._pin||null});
+    out.push({face:p.dataset.face,x:(parseFloat(p.style.left)-o.x)/o.w,y:(parseFloat(p.style.top)-o.y)/o.h,w:w/o.w,h:h/o.h,r:parseFloat(p.style.getPropertyValue('--r'))||0,img:p.toDataURL('image/png'),audio:p._snd||null,t:p._tape||null,pin:p._pin?{x:p._pin.x,y:p._pin.y}:null});
   });
   return out;
 }
