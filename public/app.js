@@ -440,7 +440,7 @@ function putDown(){
   }
   setTool('hand');
 }
-function spill(cv,x,y,size){cv.className='spill';cv.style.width=cv.style.height=size+'px';cv.style.left=(x-size/2)+'px';cv.style.top=(y-size/2)+'px';cv.setAttribute('aria-hidden','true');layer.appendChild(cv);}
+function spill(cv,x,y,size){cv.className='spill';cv.style.width=cv.style.height=size+'px';cv.style.left=(x-size/2)+'px';cv.style.top=(y-size/2)+'px';cv.setAttribute('aria-hidden','true');$('under').appendChild(cv);}
 function freeSpot(it){
   const t=$('table').getBoundingClientRect(),a=app.getBoundingClientRect(),R=Math.max(it.w,it.h),c=card.getBoundingClientRect(),right=a.right-c.right-R-30;let x=0,y=0;
   const busy=[...document.querySelectorAll('#side>.tools:not([hidden]),#sheet:not([hidden]),#cutbar:not([hidden])')].map(n=>n.getBoundingClientRect()).filter(r=>r.width);
