@@ -568,7 +568,7 @@ function kit(box,items,onPick,kitName){
   });
 }
 kit($('glitcase'),[].concat(GLITS.map((g,i)=>({name:'Thin tube of '+g[0]+' glitter glue',art:tubeArt(g[1],24,92,'a'+i),c:g[1],tip:.7,tool:'glitter',kind:'glitter'})),GLITS.map((g,i)=>({name:'Fat tube of '+g[0]+' glitter glue',art:tubeArt(g[1],38,104,'b'+i),c:g[1],tip:1.8,tool:'glitter',kind:'glitter'}))),it=>{gl=glitOf(it.c,it.tip);},'glitter');
-kit($('whitecase'),[{name:'White-out pen',art:whiteArt('pen'),tip:.45},{name:'Bottle of white-out',art:whiteArt('bottle'),tip:1},{name:'White-out roller',art:whiteArt('roller'),tip:2.4}].map(o=>Object.assign(o,{tool:'white',kind:'white'})),it=>{wtip=it.tip;},'white');
+kit($('whitecase'),[{name:'White-out pen',art:whiteArt('pen'),tip:.45},{name:'Bottle of white-out',art:whiteArt('bottle'),tip:1},{name:'White-out roller',art:whiteArt('roller'),tip:1.7}].map(o=>Object.assign(o,{tool:'white',kind:'white'})),it=>{wtip=it.tip;},'white');
 wtip=.45;
 CASE.forEach((t,ti)=>{
   const row=document.createElement('div');row.className='row';
@@ -585,7 +585,7 @@ const toolBtns=document.querySelectorAll('[data-tool]');
 function setTool(t){
   tool=t;
   marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');
-  wet.style.opacity=tool==='white'?'.85':'1';
+  wet.style.opacity=tool==='white'?'.93':'1';
   app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');if(tool!=='sound')showTape(null);
   if(tool==='sound')micOn();else micOff();
   place();
@@ -622,7 +622,7 @@ function seg(a,b){
   const it=holding&&!holding.machine?holding:null,size=tool==='pen'?pen.tip:wtip;let lw=(w?14:4.5)*ku*size,dry=0;
   if(it&&w){const thick=Math.min(1,age(it)/SPOIL.white);if(thick>=1)return;lw*=1+(Math.random()-.4)*1.6*thick;}
   if(it&&!w&&it.kind!=='crayon')dry=Math.min(1,age(it)/SPOIL.marker);
-  wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=lw;wt.strokeStyle=w?'#ffffff':pen.color;
+  wt.lineCap='round';wt.lineJoin='round';wt.lineWidth=lw;wt.strokeStyle=w?'#fbf8ee':pen.color;
   wt.beginPath();wt.moveTo(a[0],a[1]);wt.lineTo(b[0],b[1]);wt.stroke();
   if(dry>.15){
     /* a marker that lay around with its cap off skips and scratches */
@@ -961,7 +961,13 @@ marks.addEventListener('pointermove',e=>{
 });
 /* When the pen lifts, the stroke sinks into the topmost paper under each part of it: pieces first (top to bottom), the card last. */
 function settle(force){
-  const alpha=force||(tool==='white'?.85:1);
+  const alpha=force||(tool==='white'?.93:1);
+  if(!force&&tool==='white'){
+    /* white-out is a thick fluid: it dries with a raised, slightly shadowed edge, so it always looks painted on rather than erased */
+    const t=document.createElement('canvas');t.width=wet.width;t.height=wet.height;const q=t.getContext('2d');
+    q.drawImage(wet,0,0);q.globalCompositeOperation='source-in';q.fillStyle='rgba(95,85,65,.45)';q.fillRect(0,0,t.width,t.height);
+    wt.save();wt.setTransform(1,0,0,1,0,0);wt.globalCompositeOperation='destination-over';wt.drawImage(t,1.5*ku,2.2*ku);wt.drawImage(t,-.8*ku,-.8*ku);wt.restore();
+  }
   const c=card.getBoundingClientRect(),a=app.getBoundingClientRect(),cl=c.left-a.left,ct=c.top-a.top,kx=c.width/MW,ky=c.height/MH;
   const pieces=[...layer.querySelectorAll('.piece')].filter(p=>{
     if(p.hidden)return false;const r=p.getBoundingClientRect();return r.right>c.left&&r.left<c.right&&r.bottom>c.top&&r.top<c.bottom;
