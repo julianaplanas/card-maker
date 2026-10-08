@@ -117,9 +117,9 @@ function mag2(c){
 /* ---------- boxes of material: one sheet out on the table at a time; a sheet keeps its holes ---------- */
 const BOXES={mags:{name:'MAGAZINE',pages:[mag1,mag2],gone:{}},paint:{name:'PAINTING',pages:[drawScene,portrait,gridArt],gone:{}},yours:{name:'YOUR PICTURE',pages:[],gone:{}}};
 // real pictures from the materials folders replace the placeholder drawings once they have loaded
-fetch('/api/materials').then(r=>r.ok?r.json():{}).then(m=>{Object.keys(m||{}).forEach(box=>{const B=BOXES[box],urls=m[box]||[];if(!B||!urls.length)return;const got=[];let left=urls.length;
-  const done=()=>{if(--left||!got.length)return;const used=Object.keys(B.gone).length||(cur&&cur.box===box)||Object.keys(kept).some(k=>k.indexOf(box)===0);if(used)got.forEach(im=>B.pages.push(im));else B.pages=got;};
-  urls.forEach(u=>{const im=new Image();im.onload=()=>{got.push(im);done();};im.onerror=done;im.src=u;});});}).catch(()=>{});
+/* real pictures from the materials folders replace the placeholder drawings; each one is only downloaded when it is taken out of its box */
+fetch('/api/materials').then(r=>r.ok?r.json():{}).then(m=>{Object.keys(m||{}).forEach(box=>{const B=BOXES[box],urls=m[box]||[];if(!B||!urls.length)return;
+  const used=Object.keys(B.gone).length||(cur&&cur.box===box)||Object.keys(kept).some(k=>k.indexOf(box)===0);if(used)urls.forEach(u=>B.pages.push(u));else B.pages=urls.slice();});}).catch(()=>{});
 const kept={};let cur=null;
 const sheetEl=$('sheet'),grip=$('grip'),sheetname=$('sheetname');
 function stash(){
@@ -133,7 +133,16 @@ function show(box,i){
   const k=box+i,src=B.pages[i];
   if(kept[k])pg.drawImage(kept[k],0,0);
   else if(typeof src==='function')src(pg);
-  else{const s=Math.max(W/src.width,H/src.height),w=src.width*s,h=src.height*s;pg.drawImage(src,(W-w)/2,(H-h)/2,w,h);}
+  else{
+    const lay=im=>{const s=Math.max(W/im.width,H/im.height),w=im.width*s,h=im.height*s;pg.save();pg.globalCompositeOperation='destination-over';pg.drawImage(im,(W-w)/2,(H-h)/2,w,h);pg.restore();};
+    if(typeof src!=='string')lay(src);
+    else{
+      /* fetched the first time this sheet comes out; anything already cut stays cut, the picture fills in around it */
+      B.cache=B.cache||{};const im=B.cache[i]||(B.cache[i]=new Image());
+      if(im.complete&&im.naturalWidth)lay(im);
+      else{im.addEventListener('load',()=>{if(cur&&cur.box===box&&cur.i===i&&!kept[k])lay(im);},{once:true});if(!im.src)im.src=src;}
+    }
+  }
   sheetEl.style.transform='';sheetEl.hidden=false;$('cutbar').hidden=false;app.classList.remove('nosheet');dock();onTop(false);place();
   sheetname.textContent=B.name;
   noise(.12,'bandpass',700,.25);tell('A '+B.name.toLowerCase()+' sheet is on the table.');
