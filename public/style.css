@@ -267,3 +267,6 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
   #cardcell:has(#card.open){width:min(800px,calc(100vw - 624px))}
   #cardcell:has(#card.env){width:min(680px,calc(100vw - 624px))}
 }
+/* while a pen-like tool is in hand, it is the pointer over the card */
+.loose.tip{pointer-events:none;transition:none}
+#app.tipped #marks{cursor:none}

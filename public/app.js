@@ -583,7 +583,7 @@ let cutTool='scissors';
 let tool='hand',mp=null,mtrav=0;
 const toolBtns=document.querySelectorAll('[data-tool]');
 function setTool(t){
-  tool=t;
+  tool=t;setTimeout(tipped,0);
   marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');
   wet.style.opacity=tool==='white'?'.93':'1';
   app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');if(tool!=='sound')showTape(null);
@@ -603,8 +603,22 @@ function follow(e){
     /* a stamp stays standing on what it just printed, like a real one; lift it by stamping somewhere else */
     it.el.style.left=(x-it.w/2)+'px';it.el.style.top=(y-it.h*.62)+'px';it.el.style.setProperty('--r','0deg');
   }
-  else{const d=Math.max(it.w,it.h)*.5+14;it.el.style.left=(x+d*.75-it.w/2)+'px';it.el.style.top=(y-d*.75-it.h/2)+'px';}
+  else{
+    /* pens, crayons, glitter and white-out are held like a pen: the tip is exactly where the paint goes */
+    const roller=/roller/i.test(it.name),deg=roller?0:215,r=deg*Math.PI/180,k=1.32;
+    const tx=(roller?66:it.w/2)-it.w/2,ty=(roller?54:2)-it.h/2;
+    const cx=x-k*(tx*Math.cos(r)-ty*Math.sin(r)),cy=y-k*(tx*Math.sin(r)+ty*Math.cos(r));
+    it.el.style.left=(cx-it.w/2)+'px';it.el.style.top=(cy-it.h/2)+'px';it.el.style.setProperty('--r',deg+'deg');
+  }
 }
+/* the tools held like a pen let presses through to the card, and are drawn at the tip of the pointer even while it only hovers */
+function penlike(){return !!(holding&&!holding.machine&&holding.el&&['pen','glitter','white'].includes(holding.tool));}
+function tipped(){const on=penlike();app.classList.toggle('tipped',on);layer.querySelectorAll('.loose.tip').forEach(el=>{if(!on||el!==holding.el)el.classList.remove('tip');});if(on)holding.el.classList.add('tip');}
+document.addEventListener('pointerdown',e=>{
+  if(!penlike()||e.target===marks)return;
+  const r=holding.el.getBoundingClientRect();
+  if(e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom){e.preventDefault();e.stopPropagation();carryTool(holding.el,e,false);}
+},true);
 function mpos(e){const r=marks.getBoundingClientRect();return [(e.clientX-r.left)*MW/r.width,(e.clientY-r.top)*MH/r.height];}
 let ku=2,tip=1;
 function glit(a,b){
@@ -953,6 +967,7 @@ function begin(e){
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;
 }
 marks.addEventListener('pointermove',e=>{
+  if(!pull&&!mp&&!waiting&&penlike())follow(e);
   if(waiting){if(Math.hypot(e.clientX-waiting.clientX,e.clientY-waiting.clientY)<6)return;const w=waiting;waiting=null;begin(w);}
   if(pull){pulling(e);follow(e);return;}
   if(mp)follow(e);
