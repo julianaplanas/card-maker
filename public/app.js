@@ -1023,6 +1023,7 @@ function settle(force){
     wt.globalCompositeOperation='destination-out';wt.drawImage(p,0,0);wt.restore();
   });
   mk.save();mk.globalAlpha=alpha;mk.drawImage(wet,0,0);mk.restore();
+  if(face!=='env'){paperUsed=true;paperState();}
   wt.clearRect(0,0,MW,MH);
 }
 const mend=()=>{if(waiting){waiting=null;putDown();snd.tick();return;}if(pull){stick();return;}if(!mp)return;mp=null;settle();};
@@ -1077,7 +1078,7 @@ function setFace(f){
   Object.keys(BASES).forEach(k=>{BASES[k].hidden=k!==f;});mk=BASES[f].getContext('2d');
   layer.querySelectorAll('.piece,.goo').forEach(p=>{if(p.dataset.face)p.hidden=p.dataset.face!==f;});
   faceBtns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.face===f)));
-  $('envbar').hidden=f!=='env';
+  $('envbar').hidden=f!=='env';$('paperbar').hidden=f==='env';paperState();
   place();noise(.12,'bandpass',700,.25);
   tell(f==='open'?'The card is open.':f==='env'?'The envelope.':'The front of the card.');
 }
@@ -1171,7 +1172,16 @@ $('openrec').addEventListener('pointerdown',e=>{audio();press($('openrec'),e,100
 document.addEventListener('contextmenu',e=>{if(tool==='sound')e.preventDefault();});
 
 /* ---------- the envelope: try opening it, then seal it ---------- */
-let envColor='#f6f1e3';
+let envColor='#f6f1e3',paperColor='#ffffff',paperUsed=false;
+/* the card is one sheet of paper, front and inside: its colour can be chosen until something goes on it, like picking the paper before starting */
+function cardUsed(){return paperUsed||[...layer.querySelectorAll('.piece,.goo')].some(p=>p.dataset.face==='front'||p.dataset.face==='open');}
+function paperState(){$('paperbar').classList.toggle('used',cardUsed());}
+document.querySelectorAll('[data-paper]').forEach(b=>b.addEventListener('click',()=>{
+  audio();
+  if(cardUsed()&&b.dataset.paper!==paperColor){snd.tick();paperState();tell('This card already has things on it. Start a new card to choose another paper.');return;}
+  paperColor=b.dataset.paper;card.style.setProperty('--cardpaper',paperColor);noise(.1,'bandpass',900,.25);
+  document.querySelectorAll('[data-paper]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));tell('A '+b.getAttribute('aria-label').toLowerCase()+'.');
+}));
 const envBtns=document.querySelectorAll('[data-env]');
 envBtns.forEach(b=>b.addEventListener('click',()=>{
   audio();envColor=b.dataset.env;card.style.setProperty('--env',envColor);$('seal').style.background=envColor;
@@ -1181,7 +1191,7 @@ envBtns.forEach(b=>b.addEventListener('click',()=>{
 function render(f,quietOnly){
   const cw=f==='front'?600:1200,cv=document.createElement('canvas');cv.width=cw;cv.height=MH;
   const c=cv.getContext('2d');
-  c.fillStyle=f==='env'?envColor:'#ffffff';c.fillRect(0,0,cw,MH);
+  c.fillStyle=f==='env'?envColor:paperColor;c.fillRect(0,0,cw,MH);
   if(f==='env'){c.strokeStyle='#111111';c.lineWidth=6;c.beginPath();c.moveTo(0,0);c.lineTo(cw/2,MH*0.55);c.lineTo(cw,0);c.stroke();}
   if(f==='open'){c.setLineDash([14,12]);c.strokeStyle='rgba(17,17,17,.45)';c.lineWidth=4;c.beginPath();c.moveTo(cw/2,0);c.lineTo(cw/2,MH);c.stroke();c.setLineDash([]);}
   c.drawImage(BASES[f],0,0);
@@ -1282,6 +1292,7 @@ function wipe(faces){
   pick(null);
   layer.querySelectorAll('.piece,.goo').forEach(p=>{if(faces.includes(p.dataset.face)){clearTimeout(p._t);p.remove();}});
   faces.forEach(f=>{const b=BASES[f];b.getContext('2d').clearRect(0,0,b.width,b.height);});
+  if(faces.includes('front'))paperUsed=false;setTimeout(paperState,0);
   wt.clearRect(0,0,MW,MH);
 }
 $('again').addEventListener('click',()=>{audio();wipe(['front','open','env']);quiet();mail.hidden=true;setFace('front');tell('A new card. Your table is as you left it.');});
@@ -1289,5 +1300,6 @@ function quiet(){opening=null;$('openrec')._tape=null;$('openrec').classList.rem
 $('newcard').addEventListener('click',()=>{audio();wipe(['front','open']);quiet();snd.rip();tell('A new, empty card.');});
 
 Object.keys(KITS).forEach(k=>{if(KITS[k])$(KITS[k]).hidden=true;});$('penopts').hidden=true;
+document.addEventListener('pointerup',()=>setTimeout(paperState,0));
 dock();
 })();

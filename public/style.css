@@ -27,7 +27,7 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .stage{position:relative;width:min(100%,360px);aspect-ratio:3/4;background:var(--table);border:4px solid var(--line);box-sizing:border-box}
 .stage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 #ink{cursor:crosshair}
-#card{width:min(100%,380px);aspect-ratio:5/7;background:#ffffff;border:4px solid var(--line);box-sizing:border-box;display:flex;align-items:flex-end;justify-content:center;padding:10px;font-size:15px;text-align:center}
+#card{width:min(100%,380px);aspect-ratio:5/7;background:var(--cardpaper,#ffffff);border:4px solid var(--line);box-sizing:border-box;display:flex;align-items:flex-end;justify-content:center;padding:10px;font-size:15px;text-align:center}
 .side{display:flex;flex-wrap:wrap;gap:var(--gap);align-content:flex-start}
 .side>*{flex:1 1 160px}
 #bin{background:var(--blue);color:var(--on-dark);font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;min-height:150px;touch-action:manipulation}
@@ -338,3 +338,18 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 }
 @media (min-width:1100px){#table>#sheet{width:min(388px,calc((100vh - 264px) * .68))}}
 @media (min-width:1100px){#app{min-height:calc(100vh - 16px);box-sizing:border-box;align-content:start}}
+/* the colour of the card's paper: chosen before anything goes on it */
+#paperbar{justify-content:center;flex-wrap:wrap}
+#paperbar .sw{flex:0 0 34px;min-height:34px}
+#paperbar.used .sw{opacity:.35;cursor:not-allowed}
+#paperbar.used .sw[aria-pressed=true]{opacity:1}
+@media (min-width:1100px){#paperbar{grid-area:env}}
+/* room under the card for its paper colours */
+@media (min-width:1100px){
+  #card{width:min(380px,calc((100vh - 318px) * 5 / 7))}
+  #card.open{width:min(760px,calc((100vh - 318px) * 10 / 7),calc(100vw - 624px))}
+  #card.env{width:min(640px,calc((100vh - 318px) * 10 / 7),calc(100vw - 624px))}
+  #paperbar{margin-top:8px;padding:6px}
+  #paperbar .sw{flex-basis:30px;min-height:30px}
+}
+@media (min-width:1100px){#table>#sheet{width:min(388px,calc((100vh - 264px) * .64))}}
