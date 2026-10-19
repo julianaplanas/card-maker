@@ -9,7 +9,7 @@ It follows two rules:
 
 ## What works today
 
-- **Boxes of material**: Magazines, Paintings and Your pictures. Tap a box to take a random sheet out; drag the sheet back onto a box, or into the trash. A sheet keeps its holes.
+- **Boxes of material**: Magazines, Paintings and Your pictures. Tap a box to take a random sheet out; turn its pages with the arrows on its header, close it with the ×, or drag it onto a box or into the trash. A sheet keeps its holes.
 - **Cutting a sheet**: scissors, tear, hole punch, and star and heart cutters.
 - **The card**: a front and an inside. A pencil case of fine markers, fat markers and crayons in eight colors, plus tubes of glitter glue in six colors and white-out as a pen, a bottle and a roller. Glue dries after 8 seconds.
 - **Turning a piece**: tap a piece and a round yellow handle appears at its corner; drag the handle to turn it (or use the left and right arrow keys). Turning a glued piece leaves glue behind, like moving it does.
@@ -17,10 +17,10 @@ It follows two rules:
 - **Stamps**: six rubber stamps and three ink pads. Each press prints fainter; picking a pad (or a stamp) inks it again.
 - **Letters**: three sheets of sticker letters (glitter, bubble, tiles). Every sticker is shown on its sheet; drag one off the sheet and let go over the card to stick it. Each exists once, so a sheet can run out of a letter.
 - **Copier**: tap any piece and a black-and-white copy of it comes out onto the table. A copy of a copy comes out worse.
-- **Pins**: a box of pins. Drag one onto a piece on the card: the piece then turns around its pin, and whoever opens the card can spin it too. Drag the pin off again and it leaves a small hole.
 - **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card. The sound you touched last can be played slow or fast, and backwards, like a tape.
 - **Boxes and the mess**: every tool lives in a box on the shelf. Tap a box to open it on the table, then drag a tool out and let go. Tap a tool and it gets bigger: it is in your hand and works on the card. Tap it again and it is small: it does nothing, and you can carry it anywhere. Tools stay where you leave them until you drag them back to their box (or into the trash). Things left out spoil for good: markers dry, white-out thickens and blocks, an open glitter tube leaks onto the table, tape gathers fluff, ink pads dry while their box is open, and an inky stamp prints where you put it down.
-- **The trash**: drag anything into it. Double-click to take the last thing back out, then click for the ones before it.
+- **The trash**: drag anything into it, tools included. Click the can to look inside and pick anything to take back out.
+- **Tidy up** puts every tool lying on the table back in its box at once.
 - **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
 - **The link**: whoever opens it gets the envelope, then the front, then the inside. Pieces with a sound sway and glow, and play when tapped.
 

@@ -1,14 +1,18 @@
+/* fonts are served with the app (SIL Open Font License): Tiny5 for the interface, Bungee and Fredoka for sticker letters */
+@font-face{font-family:'Tiny5';src:url('/fonts/tiny5.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Bungee';src:url('/fonts/bungee.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Fredoka';src:url('/fonts/fredoka-700.woff2') format('woff2');font-weight:700;font-display:swap}
 body{margin:0}
 img{max-width:100%}
 /* Layout: one black ground, white and primary-color cells separated by thick black gaps; loose paper pieces float above the grid. */
 :root{
   --line:#111111; --paper:#fbfaf5; --red:#d21f1b; --blue:#1f3f94; --yellow:#f7d117; --table:#ddd6c4; --on-dark:#ffffff;
-  --display:'Pixelify Sans','Courier New',monospace;
+  --display:'Tiny5','Courier New',monospace;
   --gap:8px;
 }
 html,body{background:var(--line);color:var(--line)}
 [hidden]{display:none!important}
-body{font-family:var(--display);font-size:18px;line-height:1.3;padding-block:16px;padding-inline:16px}
+body{font-family:var(--display);font-synthesis:none;font-size:18px;line-height:1.3;padding-block:16px;padding-inline:16px}
 button{font:inherit;color:inherit;cursor:pointer;border:0;min-height:48px}
 button:focus-visible,label:focus-within{outline:4px solid var(--red);outline-offset:-4px}
 #app{position:relative;display:grid;gap:var(--gap);grid-template-columns:minmax(0,1fr);max-width:1500px;margin:0 auto}
@@ -46,8 +50,8 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 #shelf #newcard{width:120px;min-height:84px}
 #seal{width:120px;min-height:84px;background:#f6f1e3;font-weight:700;border:4px solid var(--paper);box-sizing:border-box}
 .box{position:relative;z-index:6;display:flex;align-items:flex-end;justify-content:center;box-sizing:border-box;width:150px;min-height:84px;padding:0 10px 10px;background:var(--yellow);color:var(--line);border:4px solid var(--paper);box-shadow:inset 0 18px 0 rgba(17,17,17,.2);font-weight:700;font-size:16px;cursor:grab;touch-action:none;user-select:none}
-.box:nth-child(2){background:var(--red);color:var(--on-dark);transform:rotate(1deg)}
-.box:nth-child(3){background:var(--paper)}
+.box[data-box=paint]{background:var(--red);color:var(--on-dark);transform:rotate(1deg)}
+.box.pick{background:var(--paper)}
 .box.lifted{z-index:40;cursor:grabbing;filter:drop-shadow(5px 7px 0 rgba(0,0,0,.5))}
 .pick{background:var(--paper);display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 14px;cursor:pointer;font-weight:700}
 .pick input{position:absolute;opacity:0;width:1px;height:1px}
@@ -270,3 +274,60 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 /* while a pen-like tool is in hand, it is the pointer over the card */
 .loose.tip{pointer-events:none;transition:none}
 #app.tipped #marks{cursor:none}
+/* ---------- everything on one screen: a compact shelf, and a card sized to the height of the window ---------- */
+#shelf h1{flex:none;align-self:stretch;display:flex;align-items:center;font-size:22px;padding:0 14px}
+@media (min-width:1100px){
+  body{padding-block:8px}
+  #app{padding:10px 12px;gap:6px 0}
+  #shelf{gap:8px 10px;padding:0 0 4px}
+  #shelf .box{width:124px;min-height:58px;font-size:14px;padding-bottom:7px;box-shadow:inset 0 12px 0 rgba(17,17,17,.2)}
+  #shelf #bin,#shelf #newcard,#seal{min-height:58px;width:110px;font-size:14px}
+  #shelf #bin svg{width:24px;height:28px}
+  .kitbox{min-height:42px;padding:12px 12px 4px;font-size:13px}
+  .cardhead{margin-bottom:6px}
+  .cardhead .faces button{min-height:40px}
+  #card{width:min(380px,calc((100vh - 250px) * 5 / 7))}
+  #card.open{width:min(760px,calc((100vh - 250px) * 10 / 7),calc(100vw - 624px))}
+  #card.env{width:min(640px,calc((100vh - 250px) * 10 / 7),calc(100vw - 624px))}
+  #cardcell:has(#card.open),#cardcell:has(#card.env){width:auto}
+  #table{min-height:0}
+}
+@media (min-width:1100px){
+  #card{width:min(380px,calc((100vh - 262px) * 5 / 7))}
+  #card.open{width:min(760px,calc((100vh - 262px) * 10 / 7),calc(100vw - 624px))}
+  #card.env{width:min(640px,calc((100vh - 262px) * 10 / 7),calc(100vw - 624px))}
+  #table>#sheet{width:min(388px,calc((100vh - 250px) * .72))}
+  #table>#sheet,#table>#cutbar{margin-top:52px}
+}
+/* turning pages, and putting the sheet away, from its own header */
+#grip .turn{margin-left:auto;display:flex;gap:6px}
+#grip .turn button{min-height:34px;min-width:38px;padding:0 8px;font-size:22px;line-height:1;background:var(--paper);border:3px solid var(--line)}
+#grip .turn #closesheet{background:var(--line);color:var(--on-dark)}
+/* the recorder's steps */
+#recsteps{flex:1 1 100%;grid-column:1/-1;margin:0;padding:12px 14px 12px 36px;background:var(--paper);font-size:15px;line-height:1.35;counter-reset:none}
+#recsteps li{margin:3px 0}
+#recsteps b{color:var(--red)}
+#shelf #tidy{width:110px;min-height:58px;font-size:14px;background:var(--yellow);color:var(--line);border:4px solid var(--paper);box-sizing:border-box}
+/* the trash is a can you can look into */
+#shelf #bin{position:relative;width:76px;min-height:68px;padding:0;background:none;border:0;color:var(--line)}
+#shelf #bin svg{width:62px;height:70px;filter:drop-shadow(3px 4px 2px rgba(17,17,17,.35))}
+#bin #count{position:absolute;right:0;top:0;min-width:24px;height:24px;border-radius:12px;background:var(--red);color:var(--on-dark);font-size:13px;display:flex;align-items:center;justify-content:center;padding:0 4px;box-sizing:border-box}
+#bin[aria-expanded=true] svg{translate:0 -3px}
+#trashview{position:absolute;z-index:2147482500;right:12px;top:84px;width:min(440px,90vw);max-height:60vh;overflow:auto;background:#6b737c;border:4px solid var(--line);padding:12px;box-shadow:8px 10px 0 rgba(17,17,17,.3)}
+#trashempty{margin:0;color:var(--on-dark)}
+#trashitems{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
+#trashitems button{min-height:88px;padding:6px;background:#8a929b;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#trashitems button:hover,#trashitems button:focus-visible{background:var(--yellow)}
+#trashitems img{max-width:76px;max-height:76px;display:block;filter:drop-shadow(2px 3px 0 rgba(17,17,17,.4))}
+/* tools cast soft, real shadows; the card and its paper keep their flat, hard ones */
+.loose{filter:drop-shadow(2px 4px 2px rgba(17,17,17,.35)) drop-shadow(6px 12px 10px rgba(17,17,17,.22))}
+.loose.held{filter:drop-shadow(4px 8px 3px rgba(17,17,17,.3)) drop-shadow(14px 24px 16px rgba(17,17,17,.25))}
+.kit button svg,.kit button canvas,#pencase button svg{filter:drop-shadow(1px 3px 2px rgba(0,0,0,.4)) drop-shadow(3px 7px 6px rgba(0,0,0,.18))}
+#side{max-height:calc(100vh - 200px);overflow:auto}
+#table>#side{max-height:calc(100vh - 200px);overflow-y:auto}
+/* the recipient opens the envelope: the card rises out of it and the envelope drops away */
+.cv-rise{position:absolute;left:50%;top:0;height:100%;width:auto;max-width:none;z-index:0;transform:translate(-50%,30%);animation:cv-rise 1.15s ease-in-out forwards;filter:drop-shadow(4px 6px 0 rgba(17,17,17,.35))}
+@keyframes cv-rise{0%{transform:translate(-50%,30%) scale(.86)}55%{transform:translate(-50%,-42%) scale(.86)}100%{transform:translate(-50%,0) scale(1)}}
+.cv-next.cv-leaving{position:relative;z-index:1;animation:cv-leave 1.15s ease-in forwards}
+@keyframes cv-leave{0%,50%{transform:none;opacity:1}100%{transform:translateY(35%) rotate(-4deg);opacity:0}}
+#app{-webkit-user-select:none;user-select:none}

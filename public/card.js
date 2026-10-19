@@ -13,7 +13,7 @@
   function start(extras) {
     const keep = document.getElementById('keep');
     if (extras && extras.until) {
-      const label = 'THIS CARD LASTS UNTIL ' + window.CardViewer.day(extras.until).toUpperCase() + '. KEEP IT';
+      const label = 'THIS CARD LASTS UNTIL ' + window.CardViewer.day(extras.until).toUpperCase() + '. DOWNLOAD IT';
       keep.textContent = label;
       keep.hidden = false;
       keep.addEventListener('click', () => {

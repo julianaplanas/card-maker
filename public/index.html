@@ -4,26 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Card Maker</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&family=Fredoka:wght@700&family=Bungee&display=swap">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div id="app" class="nosheet">
-  <header>
-    <h1>CARD MAKER</h1>
-  </header>
 
   <div id="shelf">
+    <h1>CARD MAKER</h1>
     <button type="button" class="box" data-box="mags">MAGAZINES</button>
     <button type="button" class="box" data-box="paint">PAINTINGS</button>
     <label class="box pick">YOUR PICTURES<input id="file" type="file" accept="image/*"></label>
     <span class="gap"></span>
+    <button id="tidy" type="button">TIDY UP</button>
     <button id="newcard" type="button">NEW CARD</button>
     <button type="button" id="seal">ENVELOPE</button>
-    <button id="bin" type="button" aria-label="Trash can. Double-click to take the last thing out.">
-      <svg width="52" height="60" viewBox="0 0 52 60" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="square" aria-hidden="true"><path d="M4 14h44M18 14V6h16v8M9 14l4 42h26l4-42M21 24v22M31 24v22"/></svg>
-      <span>TRASH: <span id="count">0</span></span>
+    <button id="bin" type="button" aria-label="Trash can. Open it to see what is inside and take something back out." aria-expanded="false">
+      <svg viewBox="0 0 64 72" aria-hidden="true"><defs><linearGradient id="tin" x1="0" x2="1"><stop offset="0" stop-color="#7d858f"/><stop offset=".35" stop-color="#d9dee3"/><stop offset=".6" stop-color="#aab2ba"/><stop offset="1" stop-color="#6b737c"/></linearGradient></defs>
+        <g id="binpeek"></g>
+        <path d="M10 20h44l-5 48H15z" fill="url(#tin)" stroke="#111" stroke-width="2.5"/>
+        <path d="M20 28l2 32M32 28v32M44 28l-2 32" stroke="#5c636b" stroke-width="2"/>
+        <rect x="6" y="13" width="52" height="8" rx="3" fill="url(#tin)" stroke="#111" stroke-width="2.5"/>
+        <rect x="26" y="8" width="12" height="6" rx="2" fill="#aab2ba" stroke="#111" stroke-width="2"/>
+      </svg>
+      <span id="count" aria-hidden="true">0</span>
     </button>
+    <div id="trashview" role="dialog" aria-label="Inside the trash" hidden><p id="trashempty">The trash is empty.</p><div id="trashitems"></div></div>
     <div id="kits" role="group" aria-label="Boxes of tools">
       <button type="button" class="kitbox" data-kit="pens" aria-expanded="false">PENS</button>
       <button type="button" class="kitbox" data-kit="glitter" aria-expanded="false">GLITTER</button>
@@ -31,7 +36,6 @@
       <button type="button" class="kitbox" data-kit="tape" aria-expanded="false">TAPE</button>
       <button type="button" class="kitbox" data-kit="stamps" aria-expanded="false">STAMPS</button>
       <button type="button" class="kitbox" data-kit="stickers" aria-expanded="false">STICKERS</button>
-      <button type="button" class="kitbox" data-kit="pins" aria-expanded="false">PINS</button>
       <button type="button" class="kitbox" data-kit="copier" aria-expanded="false">COPIER</button>
       <button type="button" class="kitbox" data-kit="recorder" aria-expanded="false">RECORDER</button>
     </div>
@@ -41,7 +45,7 @@
   <section class="cell work" id="table" aria-label="The table">
     <h2>THE TABLE</h2>
     <div id="sheet" hidden>
-      <div id="grip" role="button" tabindex="0" aria-label="Handle of the sheet. Drag it to a box to put the sheet back, or to the trash."><span class="bars" aria-hidden="true"></span><span id="sheetname"></span></div>
+      <div id="grip" role="button" tabindex="0" aria-label="Handle of the sheet. Drag it to a box to put the sheet back, or to the trash."><span class="bars" aria-hidden="true"></span><span id="sheetname"></span><span class="turn"><button type="button" id="prevpage" aria-label="Previous page">&lsaquo;</button><button type="button" id="nextpage" aria-label="Next page">&rsaquo;</button><button type="button" id="closesheet" aria-label="Put the sheet back in its box">&times;</button></span></div>
       <div class="stage" id="stage">
       <canvas id="page" aria-label="The sheet you are cutting from"></canvas>
       <canvas id="ink" aria-hidden="true"></canvas>
@@ -117,6 +121,13 @@
       <div id="rolls" class="kit" role="group" aria-label="Rolls of tape"></div>
     </div>
     <div class="tools" id="sndopts" role="group" aria-label="Sound for a moment" hidden>
+      <ol id="recsteps">
+        <li><b>Hold a piece</b> on the card and speak. Up to 5 seconds.</li>
+        <li><b>Let go</b> to stop. The piece starts to glow.</li>
+        <li><b>Tap it</b> to hear it. Hold it again to record over it.</li>
+        <li><b>Hold the button below</b> to record what plays when the card is opened. Up to 10 seconds.</li>
+        <li><b>Tap a sound</b>, then pick slow, fast or backwards.</li>
+      </ol>
       <button type="button" id="openrec">WHEN THE CARD OPENS</button>
       <div id="tape" role="group" aria-label="The sound you touched last" hidden>
         <button type="button" data-rate="0.6" aria-pressed="false">SLOW</button>

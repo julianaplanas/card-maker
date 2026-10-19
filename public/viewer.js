@@ -221,8 +221,29 @@
       });
       if (spoken && onSay) onSay(st.said);
     }
+    let busy = false;
     next.addEventListener('click', () => {
+      if (busy) return;
       const n = (at + 1) % STAGES.length;
+      // opening the envelope: the card slides up out of it, then the envelope falls away
+      if (n === 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        busy = true;
+        paper(1300, 0.22);
+        setTimeout(() => paper(600, 0.3), 450);
+        const rise = document.createElement('img');
+        rise.className = 'cv-rise';
+        rise.alt = '';
+        rise.src = data.faces.front;
+        root.insertBefore(rise, next);
+        next.classList.add('cv-leaving');
+        setTimeout(() => {
+          rise.remove();
+          next.classList.remove('cv-leaving');
+          busy = false;
+          show(1, true);
+        }, 1150);
+        return;
+      }
       paper(n === 1 ? 1300 : 700, n === 1 ? 0.22 : 0.12);
       show(n, true);
       if (n === 2 && data.opening) play(data.opening, data.openingTape);
@@ -259,13 +280,20 @@
   // Saves the card as one file that opens like the link does: pictures, sounds and this viewer are all inside it.
   function keep(data) {
     const sides = ['env', 'front', 'open'];
-    return Promise.all([text('/viewer.js'), text('/style.css'), Promise.all(sides.map((s) => asData(data.faces[s])))]).then((got) => {
+    // the interface font travels inside the file too, so the kept card looks the same offline
+    const css = text('/style.css').then((c) =>
+      asData('/fonts/tiny5.woff2').then(
+        (f) => c.replace("url('/fonts/tiny5.woff2')", "url('" + f + "')"),
+        () => c
+      )
+    );
+    return Promise.all([text('/viewer.js'), css, Promise.all(sides.map((s) => asData(data.faces[s])))]).then((got) => {
       const faces = {};
       sides.forEach((s, i) => (faces[s] = got[2][i]));
       const card = JSON.stringify({ faces, sounds: data.sounds || [], opening: data.opening || null, openingTape: data.openingTape || null }).replace(/</g, '\\u003c');
       const html =
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
-        '<title>A card for you</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap">' +
+        '<title>A card for you</title>' +
         '<style>' + got[1] + 'html,body{height:100%}body{padding:16px;box-sizing:border-box;display:flex;align-items:center;justify-content:center}.cv-face{max-height:90vh}</style>' +
         '</head><body><div id="view"></div><p id="say" class="sr" role="status"></p>' +
         '<script>' + got[0] + '</' + 'script><script>CardViewer.mount(document.getElementById("view"),' + card +

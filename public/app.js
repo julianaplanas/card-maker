@@ -163,10 +163,19 @@ $('side').addEventListener('pointerdown',()=>onTop(true),true);
 sheetEl.addEventListener('pointerdown',()=>onTop(false),true);$('cutbar').addEventListener('pointerdown',()=>onTop(false),true);
 if(wideMQ.addEventListener)wideMQ.addEventListener('change',dock);
 function clearTable(){stash();cur=null;sheetEl.hidden=true;sheetEl.style.transform='';$('cutbar').hidden=true;app.classList.add('nosheet');dock();place();}
+/* leafing through a box: the next or previous page that is still in it */
+function leaf(dir){
+  if(!cur)return;const B=BOXES[cur.box],n=B.pages.length;
+  for(let k=1;k<=n;k++){const j=((cur.i+dir*k)%n+n)%n;if(!B.gone[j]){if(j!==cur.i){show(cur.box,j);noise(.08,'bandpass',1400,.25);}return;}}
+}
+['prevpage','nextpage','closesheet'].forEach(id=>{const b=$(id);b.addEventListener('pointerdown',e=>e.stopPropagation());});
+$('prevpage').addEventListener('click',()=>{audio();leaf(-1);});
+$('nextpage').addEventListener('click',()=>{audio();leaf(1);});
+$('closesheet').addEventListener('click',()=>{audio();putBack();});
 function putBack(){if(!cur)return;clearTable();noise(.12,'bandpass',500,.25);tell('Sheet put back in its box.');}
 function trashSheet(){
   if(!cur)return;const t={sheet:true,box:cur.box,i:cur.i};BOXES[t.box].gone[t.i]=true;clearTable();
-  stack.push(t);count.textContent=String(stack.length);
+  stack.push(t);count.textContent=String(stack.length);drawTrash();
   snd.trash();bin.classList.remove('shake');void bin.offsetWidth;bin.classList.add('shake');
   tell('The whole sheet is in the trash.');
 }
@@ -508,6 +517,14 @@ setInterval(()=>{
     spill(c,cx+Math.sin(r)*d,cy-Math.cos(r)*d,size);
   });
 },3000);
+/* tidying up: every tool lying on the table goes back into its box at once. What was spilled or printed on the table stays. */
+$('tidy').addEventListener('click',()=>{
+  audio();const loose=[...layer.querySelectorAll('.loose')];
+  if(!loose.length){snd.tick();tell('Nothing to tidy.');return;}
+  if(holding&&!holding.machine)putDown();
+  loose.forEach((el,n)=>{const it=el._item;setTimeout(()=>{el.remove();it.el=null;if(it.t0){it.out+=Date.now()-it.t0;it.t0=null;}it.btn.classList.remove('out');snd.tick();},n*70);});
+  tell('Everything is back in its box.');
+});
 /* the boxes on the shelf: tap one to open it on the table, tap again to close it */
 const KITS={pens:'pencase',glitter:'glitcase',white:'whitecase',tape:'tapeopts',stamps:'stampopts',stickers:'letteropts',pins:'pinopts',recorder:'sndopts',copier:null};
 let padOpen=0,padSince=null;
@@ -519,12 +536,16 @@ function kitOpen(name,open){
   if(name==='stamps'){if(open)padSince=Date.now();else if(padSince){padOpen+=Date.now()-padSince;padSince=null;}}
   if(name==='recorder'){if(open)holdMachine('sound','the recorder');else if(holding&&holding.tool==='sound')dropHold();}
   if(name==='copier'){if(open)holdMachine('copy','the copier');else if(holding&&holding.tool==='copy')dropHold();}
+  /* the box opened last lies on top of the pile, at the top of the table */
+  if(open&&id){const el=$(id),side=$('side');if(el.parentNode===$('penopts')){$('penopts').prepend(el);side.prepend($('penopts'));}else side.prepend(el);}
   if(open)onTop(true);place();
 }
 document.querySelectorAll('.kitbox').forEach(b=>b.addEventListener('click',()=>{audio();snd.tick();kitOpen(b.dataset.kit,b.getAttribute('aria-expanded')!=='true');}));
 /* ---------- the pencil case: fine markers, fat markers and crayons, each drawn as the thing itself ---------- */
 const INKSET=[['black','#111111'],['red','#d21f1b'],['blue','#1f3f94'],['yellow','#f7c600'],['green','#1f9d55'],['pink','#ff4fa3'],['orange','#ff7a1a'],['purple','#7a3fd0']];
 const CASE=[{kind:'fine',name:'Fine marker',tip:.5,w:22,h:96},{kind:'fat',name:'Fat marker',tip:2.4,w:36,h:104},{kind:'crayon',name:'Crayon',tip:1.5,w:20,h:86}];
+/* light falls on the tools from the upper left, so they read as round objects lying on the table, not as flat paper */
+const CYL='<defs><linearGradient id="cyl" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".32"/><stop offset=".22" stop-color="#000" stop-opacity="0"/><stop offset=".36" stop-color="#fff" stop-opacity=".55"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></linearGradient></defs>';
 function toolArt(kind,c,w,h){
   const d=shade(c,.62),l=shade(c,1.3),o=' stroke="#111" stroke-width="1.5"';
   let g='';
@@ -537,7 +558,8 @@ function toolArt(kind,c,w,h){
      +'<rect x="2" y="'+(h-12)+'" width="'+(w-4)+'" height="10" rx="3" fill="'+c+'"'+o+'/>'
      +'<rect x="1" y="2" width="'+(w-2)+'" height="'+cap+'" rx="'+(kind==='fat'?5:6)+'" fill="'+c+'"'+o+'/><rect x="'+(w-8)+'" y="8" width="3" height="'+(cap-14)+'" fill="'+l+'"/><rect x="1" y="'+(cap-7)+'" width="'+(w-2)+'" height="5" fill="'+d+'"/>';
   }
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+g+'</svg>';
+  g+=kind==='crayon'?'<rect x="2" y="18" width="'+(w-4)+'" height="'+(h-20)+'" fill="url(#cyl)"/>':'<rect x="1" y="2" width="'+(w-2)+'" height="'+(h-4)+'" rx="4" fill="url(#cyl)"/>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+CYL+g+'</svg>';
 }
 let pen={kind:'fine',color:'#111111',tip:.5};
 /* tubes of glitter glue, thin and fat, and three ways to white something out */
@@ -548,15 +570,15 @@ let gl=glitOf('#d6aa28',.7),wtip=1;
 function tubeArt(c,w,h,id){
   const fill=c||'url(#rb'+id+')',o=' stroke="#111" stroke-width="1.5"';let dots='';
   for(let i=0;i<w*1.1;i++){const x=4+((i*37)%(w-8)),y=30+((i*53)%(h-46));dots+='<rect x="'+x+'" y="'+y+'" width="2" height="2" fill="'+(i%3?'#ffffff':'#fff6c2')+'" opacity="'+(.5+(i%4)*.15)+'"/>';}
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true"><defs><linearGradient id="rb'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4fa3"/><stop offset=".25" stop-color="#f7d117"/><stop offset=".5" stop-color="#19c3b3"/><stop offset=".75" stop-color="#3d8bff"/><stop offset="1" stop-color="#8a4fff"/></linearGradient></defs>'
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+CYL+'<defs><linearGradient id="rb'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4fa3"/><stop offset=".25" stop-color="#f7d117"/><stop offset=".5" stop-color="#19c3b3"/><stop offset=".75" stop-color="#3d8bff"/><stop offset="1" stop-color="#8a4fff"/></linearGradient></defs>'
     +'<path d="M'+(w/2-2)+' 2h4l2 12h-8z" fill="#f4f1e8"'+o+'/><rect x="'+(w/2-7)+'" y="13" width="14" height="8" fill="#e2ddd0"'+o+'/>'
-    +'<path d="M'+(w/2-7)+' 21h14l'+(w/2-9)+' 9v'+(h-42)+'H2V30z" fill="'+fill+'"'+o+'/>'+dots
+    +'<path d="M'+(w/2-7)+' 21h14l'+(w/2-9)+' 9v'+(h-42)+'H2V30z" fill="'+fill+'"'+o+'/>'+dots+'<path d="M'+(w/2-7)+' 21h14l'+(w/2-9)+' 9v'+(h-42)+'H2V30z" fill="url(#cyl)"/>'
     +'<rect x="1" y="'+(h-12)+'" width="'+(w-2)+'" height="10" fill="#cfc9bb"'+o+'/><path d="M5 '+(h-12)+'v10M'+(w/2)+' '+(h-12)+'v10M'+(w-5)+' '+(h-12)+'v10" stroke="#8d877a" stroke-width="1.5"/></svg>';
 }
 function whiteArt(kind){
   const o=' stroke="#111" stroke-width="1.5"',B='#1f3f94';
-  if(kind==='pen')return '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="100" viewBox="0 0 22 100" aria-hidden="true"><path d="M9 2h4l1 12H8z" fill="#b9bec6"'+o+'/><path d="M6 14h10l3 12H3z" fill="'+B+'"'+o+'/><rect x="3" y="26" width="16" height="72" rx="4" fill="#ffffff"'+o+'/><rect x="3" y="44" width="16" height="22" fill="'+B+'"/><rect x="7" y="50" width="8" height="10" fill="#ffffff"/></svg>';
-  if(kind==='bottle')return '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="92" viewBox="0 0 44 92" aria-hidden="true"><rect x="12" y="2" width="20" height="30" rx="3" fill="'+B+'"'+o+'/><path d="M14 8h16M14 14h16M14 20h16" stroke="#16306f" stroke-width="2"/><path d="M14 32h16l10 12v40a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6V44z" fill="#ffffff"'+o+'/><rect x="4" y="52" width="36" height="24" fill="'+B+'"/><rect x="12" y="58" width="20" height="12" fill="#ffffff"/></svg>';
+  if(kind==='pen')return '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="100" viewBox="0 0 22 100" aria-hidden="true">'+CYL+'<path d="M9 2h4l1 12H8z" fill="#b9bec6"'+o+'/><path d="M6 14h10l3 12H3z" fill="'+B+'"'+o+'/><rect x="3" y="26" width="16" height="72" rx="4" fill="#ffffff"'+o+'/><rect x="3" y="44" width="16" height="22" fill="'+B+'"/><rect x="7" y="50" width="8" height="10" fill="#ffffff"/><rect x="3" y="14" width="16" height="84" rx="4" fill="url(#cyl)"/></svg>';
+  if(kind==='bottle')return '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="92" viewBox="0 0 44 92" aria-hidden="true">'+CYL+'<rect x="12" y="2" width="20" height="30" rx="3" fill="'+B+'"'+o+'/><path d="M14 8h16M14 14h16M14 20h16" stroke="#16306f" stroke-width="2"/><path d="M14 32h16l10 12v40a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6V44z" fill="#ffffff"'+o+'/><rect x="4" y="52" width="36" height="24" fill="'+B+'"/><rect x="12" y="58" width="20" height="12" fill="#ffffff"/><path d="M14 32h16l10 12v40a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6V44z" fill="url(#cyl)"/><rect x="12" y="2" width="20" height="30" rx="3" fill="url(#cyl)"/></svg>';
   return '<svg xmlns="http://www.w3.org/2000/svg" width="74" height="60" viewBox="0 0 74 60" aria-hidden="true"><path d="M4 30C4 12 18 4 36 4h20c8 0 14 6 14 14v6L56 50c-3 5-8 8-14 8H24C12 58 4 46 4 30z" fill="rgba(143,193,227,.85)"'+o+'/><circle cx="28" cy="30" r="15" fill="#ffffff"'+o+'/><circle cx="28" cy="30" r="5" fill="'+B+'"'+o+'/><circle cx="52" cy="22" r="8" fill="#ffffff"'+o+'/><path d="M60 40l10 12-6 4-12-8z" fill="#ffffff"'+o+'/></svg>';
 }
 function kit(box,items,onPick,kitName){
@@ -774,6 +796,7 @@ kit($('stamprack'),Object.keys(STAMPS).map(k=>{
   x.fillStyle='#7a4b22';x.beginPath();x.roundRect(21,2,18,26,8);x.fill();x.fillStyle='#9a6532';x.beginPath();x.roundRect(24,4,6,20,3);x.fill();
   x.fillStyle='#c9975a';x.strokeStyle='#111';x.lineWidth=1.5;x.beginPath();x.roundRect(4,24,52,40,4);x.fill();x.stroke();
   x.fillStyle='#b5433a';x.fillRect(5,64,50,7);x.strokeRect(5,64,50,7);
+  {const g=x.createLinearGradient(4,0,56,0);g.addColorStop(0,'rgba(0,0,0,.25)');g.addColorStop(.3,'rgba(255,255,255,.3)');g.addColorStop(.55,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(0,0,0,.3)');x.fillStyle=g;x.fillRect(5,25,50,46);x.fillRect(22,3,16,24);}
   x.save();x.translate(30,44);x.scale(.32,.32);x.fillStyle=x.strokeStyle='#4a2c10';STAMPS[k](x);x.restore();
   return {name:'The '+k+' stamp',art:c,data:{stamp:k},tool:'stamp',kind:'stamp',ink:1};
 }),it=>{stamp=it.data.stamp;inked=it.ink==null?1:it.ink;},'stamps');
@@ -915,6 +938,7 @@ kit($('rolls'),Object.keys(ROLLS).map(k=>{
   x.save();x.beginPath();x.moveTo(30,42);x.lineTo(82,42);x.lineTo(86,46);x.lineTo(82,50);x.lineTo(86,54);x.lineTo(82,58);x.lineTo(30,58);x.closePath();x.clip();x.translate(30,42);paint(60,16);x.restore();
   x.strokeStyle='#111';x.lineWidth=1.5;x.strokeRect(30,42,53,16);
   x.save();x.beginPath();x.arc(30,30,28,0,7);x.arc(30,30,12,0,7,true);x.clip('evenodd');x.translate(0,0);paint(60,60);x.restore();
+  {const g=x.createRadialGradient(22,20,4,30,30,30);g.addColorStop(0,'rgba(255,255,255,.45)');g.addColorStop(.5,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(0,0,0,.3)');x.save();x.beginPath();x.arc(30,30,28,0,7);x.arc(30,30,12,0,7,true);x.fillStyle=g;x.fill('evenodd');x.restore();}
   x.beginPath();x.arc(30,30,28,0,7);x.stroke();x.beginPath();x.arc(30,30,12,0,7);x.fillStyle='#b98d55';x.fill();x.stroke();x.beginPath();x.arc(30,30,7,0,7);x.fillStyle='#e4dccb';x.fill();x.stroke();
   return {name:k+' tape',art:c,data:{roll:k},tool:'tape',kind:'tape'};
 }),it=>{roll=it.data.roll;},'tape');
@@ -1006,28 +1030,42 @@ marks.addEventListener('pointerup',mend);marks.addEventListener('pointercancel',
 
 function toTrash(el){if(el===taped)showTape(null);
   if(picked===el)pick(null);
-  unglue(el);el.remove();stack.push(el);count.textContent=String(stack.length);
+  unglue(el);el.remove();stack.push(el);count.textContent=String(stack.length);drawTrash();drawTrash();
   snd.trash();bin.classList.remove('shake');void bin.offsetWidth;bin.classList.add('shake');
   tell('In the trash. Double-click the trash to take the last thing back out.');
 }
-function popTrash(){
+/* taking something back out of the trash: any of the things in it, not only the last */
+function popTrash(idx){
   if(!stack.length){snd.tick();tell('The trash is empty.');return;}
-  if(stack[stack.length-1].sheet){const t=stack.pop();delete BOXES[t.box].gone[t.i];count.textContent=String(stack.length);snd.pop();show(t.box,t.i);return;}
-  if(stack[stack.length-1]._item){const el=stack.pop(),b=bin.getBoundingClientRect(),a=app.getBoundingClientRect();const t=$('table').getBoundingClientRect();el.style.left=(t.left-a.left+40+Math.random()*Math.max(20,t.width-160))+'px';el.style.top=(t.top-a.top+80+Math.random()*Math.max(20,t.height-220))+'px';el.style.zIndex=String(100000+ ++z);layer.appendChild(el);el._item.leakAt=Date.now();count.textContent=String(stack.length);snd.pop();tell('Taken out of the trash.');return;}
-  const el=stack.pop(),b=bin.getBoundingClientRect(),a=app.getBoundingClientRect(),w=parseFloat(el.style.width)||40;
-  const x=Math.max(0,b.left-a.left-w*0.6-Math.random()*40),y=Math.max(0,b.top-a.top-20+Math.random()*50);
-  addPiece(el,parseFloat(el.style.width),parseFloat(el.style.height),x,y);
-  count.textContent=String(stack.length);snd.pop();
-  tell(stack.length?'Taken out. '+stack.length+' still in the trash. Click again for the one before it.':'Taken out. The trash is empty now.');
+  if(idx==null)idx=stack.length-1;
+  const t=stack.splice(idx,1)[0],a=app.getBoundingClientRect(),tb=$('table').getBoundingClientRect();count.textContent=String(stack.length);snd.pop();
+  if(t.sheet){delete BOXES[t.box].gone[t.i];show(t.box,t.i);}
+  else if(t._item){t.style.left=(tb.left-a.left+40+Math.random()*Math.max(20,tb.width-160))+'px';t.style.top=(tb.top-a.top+80+Math.random()*Math.max(20,tb.height-220))+'px';t.style.zIndex=String(100000+ ++z);layer.appendChild(t);t._item.leakAt=Date.now();}
+  else{const w=parseFloat(t.style.width)||40,h=parseFloat(t.style.height)||40;addPiece(t,w,h,tb.left-a.left+30+Math.random()*Math.max(20,tb.width-w-60),tb.top-a.top+60+Math.random()*Math.max(20,tb.height-h-120));}
+  tell('Taken out of the trash.');drawTrash();
 }
-bin.addEventListener('click',e=>{
-  audio();const now=performance.now();
-  if(restore||e.detail===0){restore=true;popTrash();}
-  else if(now-lastClick<400){restore=true;lastClick=0;popTrash();return;}
-  else tell('Double-click the trash to take the last thing out.');
-  lastClick=now;
-});
-document.addEventListener('pointerdown',e=>{if(!bin.contains(e.target))restore=false;});
+function trashPic(t){
+  if(t._item)return t._item.src;
+  if(t.sheet){
+    const k=t.box+t.i,c=document.createElement('canvas');c.width=W/4;c.height=H/4;const x=c.getContext('2d');x.scale(.25,.25);
+    const src=BOXES[t.box].pages[t.i];
+    if(kept[k])x.drawImage(kept[k],0,0);else if(typeof src==='function')src(x);
+    else{const im=typeof src==='string'?(BOXES[t.box].cache||{})[t.i]:src;if(im&&im.naturalWidth){const s=Math.max(W/im.naturalWidth,H/im.naturalHeight);x.drawImage(im,(W-im.naturalWidth*s)/2,(H-im.naturalHeight*s)/2,im.naturalWidth*s,im.naturalHeight*s);}else{x.fillStyle='#fbfaf5';x.fillRect(0,0,W,H);}}
+    return c.toDataURL();
+  }
+  return t.toDataURL();
+}
+function drawTrash(){
+  const v=$('trashview');if(v.hidden)return;const box=$('trashitems');box.textContent='';$('trashempty').hidden=!!stack.length;
+  stack.slice().reverse().forEach((t,n)=>{
+    const idx=stack.length-1-n,b=document.createElement('button');b.type='button';b.setAttribute('aria-label',t._item?t._item.name:t.sheet?'A whole sheet':'A piece of paper');
+    const im=document.createElement('img');im.alt='';im.src=trashPic(t);b.appendChild(im);
+    b.addEventListener('click',()=>{audio();popTrash(idx);});box.appendChild(b);
+  });
+}
+function openTrash(open){$('trashview').hidden=!open;bin.setAttribute('aria-expanded',String(open));if(open){noise(.15,'lowpass',600,.3);drawTrash();}}
+bin.addEventListener('click',()=>{audio();openTrash($('trashview').hidden);});
+document.addEventListener('pointerdown',e=>{if(!$('trashview').hidden&&!bin.contains(e.target)&&!$('trashview').contains(e.target))openTrash(false);});
 
 
 const BASES={front:baseF,open:baseO,env:baseE};
@@ -1217,7 +1255,7 @@ function showSaved(r){
   if(r&&r.id){
     $('linktext').textContent=location.origin+'/card/'+r.id;
     $('copy').hidden=false;$('share').hidden=!navigator.share;$('retry').hidden=true;
-    $('keep').textContent='THIS CARD LASTS UNTIL '+CardViewer.day(r.until||Date.now()+14*86400000).toUpperCase()+'. KEEP IT';$('keep').hidden=false;
+    $('keep').textContent='THIS CARD LASTS UNTIL '+CardViewer.day(r.until||Date.now()+14*86400000).toUpperCase()+'. DOWNLOAD IT';$('keep').hidden=false;
     tell('The envelope is closed. Its link is ready to share.');
   }else{
     $('linktext').textContent='The card could not be saved. Check your connection.';
