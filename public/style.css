@@ -331,3 +331,10 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .cv-next.cv-leaving{position:relative;z-index:1;animation:cv-leave 1.15s ease-in forwards}
 @keyframes cv-leave{0%,50%{transform:none;opacity:1}100%{transform:translateY(35%) rotate(-4deg);opacity:0}}
 #app{-webkit-user-select:none;user-select:none}
+/* the table's columns fill its share of the screen, so an open box (stickers above all) uses the whole width beside the card */
+@media (min-width:1100px){
+  #table{grid-template-columns:minmax(0,1fr) 132px}
+  #table>#side{justify-self:stretch;width:100%}
+}
+@media (min-width:1100px){#table>#sheet{width:min(388px,calc((100vh - 264px) * .68))}}
+@media (min-width:1100px){#app{min-height:calc(100vh - 16px);box-sizing:border-box;align-content:start}}
