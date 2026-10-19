@@ -134,7 +134,8 @@ function show(box,i){
   if(kept[k])pg.drawImage(kept[k],0,0);
   else if(typeof src==='function')src(pg);
   else{
-    const lay=im=>{const s=Math.max(W/im.width,H/im.height),w=im.width*s,h=im.height*s;pg.save();pg.globalCompositeOperation='destination-over';pg.drawImage(im,(W-w)/2,(H-h)/2,w,h);pg.restore();};
+    /* the whole picture is printed on the sheet, however it is shaped; what is left around it is plain paper, which can be cut too */
+    const lay=im=>{const s=Math.min(W/im.width,H/im.height),w=im.width*s,h=im.height*s;pg.save();pg.globalCompositeOperation='destination-over';pg.drawImage(im,(W-w)/2,(H-h)/2,w,h);pg.fillStyle='#fbfaf5';pg.fillRect(0,0,W,H);pg.restore();};
     if(typeof src!=='string')lay(src);
     else{
       /* fetched the first time this sheet comes out; anything already cut stays cut, the picture fills in around it */

@@ -209,6 +209,7 @@
     });
 
     let at = 0;
+    let book = null;
     function show(i, spoken) {
       at = i;
       const st = STAGES[i];
@@ -220,6 +221,28 @@
         if (p.face === st.side) setTimeout(p.wiggle, 450);
       });
       if (spoken && onSay) onSay(st.said);
+      if (book) {
+        book.remove();
+        book = null;
+      }
+      if (i === 1 && moving()) {
+        if (pic.complete && pic.naturalWidth) makeBook();
+        else pic.addEventListener('load', makeBook, { once: true });
+      }
+    }
+    const moving = () => !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // The front of the card is a cover on a hinge: it lifts a little now and then to show there is an inside,
+    // and when tapped it swings all the way open.
+    function makeBook() {
+      if (at !== 1 || book) return;
+      book = document.createElement('div');
+      book.className = 'cv-book';
+      book.setAttribute('aria-hidden', 'true');
+      Object.assign(book.style, { left: pic.offsetLeft + 'px', top: pic.offsetTop + 'px', width: pic.offsetWidth + 'px', height: pic.offsetHeight + 'px' });
+      book.innerHTML =
+        '<div class="cv-inside"><img alt="" src="' + data.faces.open + '"></div>' +
+        '<div class="cv-cover"><img class="cv-coverfront" alt="" src="' + data.faces.front + '"><div class="cv-coverback"><img alt="" src="' + data.faces.open + '"></div></div>';
+      root.insertBefore(book, next.nextSibling);
     }
     let busy = false;
     next.addEventListener('click', () => {
@@ -242,6 +265,17 @@
           busy = false;
           show(1, true);
         }, 1150);
+        return;
+      }
+      if (n === 2 && book) {
+        busy = true;
+        paper(900, 0.35);
+        book.classList.add('cv-opening');
+        setTimeout(() => {
+          busy = false;
+          show(2, true);
+          if (data.opening) play(data.opening, data.openingTape);
+        }, 1000);
         return;
       }
       paper(n === 1 ? 1300 : 700, n === 1 ? 0.22 : 0.12);
