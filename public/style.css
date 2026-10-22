@@ -368,3 +368,12 @@ h2{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.04em}
 .cv-book.cv-opening .cv-cover{animation:cv-open .95s ease-in-out forwards}
 @keyframes cv-open{from{transform:rotateY(0)}to{transform:rotateY(-180deg)}}
 .cv-piece{z-index:3}
+/* for now the maker is a desktop thing: on phones, tablets and narrow windows it says so instead of half-working */
+#desktoponly{display:none}
+@media (max-width:1099px),(pointer:coarse){
+  #desktoponly{display:flex;position:fixed;inset:0;z-index:2147483600;align-items:center;justify-content:center;padding:24px;background:var(--table);text-align:center}
+  #desktoponly>div{max-width:420px;background:var(--paper);border:4px solid var(--line);padding:24px;box-shadow:8px 10px 0 rgba(17,17,17,.3)}
+  #desktoponly p{margin:0 0 12px;font-size:18px;line-height:1.4}
+  #desktoponly .big{font-size:28px;background:var(--yellow);margin:-24px -24px 18px;padding:14px}
+  #app{display:none}
+}
