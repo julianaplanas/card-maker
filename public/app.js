@@ -441,6 +441,22 @@ function holdable(b,it){
   });
 }
 function showHand(){}
+/* putting the tool in your hand back in its box: press its empty place, or anywhere in the open box that is not another tool */
+function stow(it){
+  if(holding===it){holding=null;if(it.kind==='stamp')it.ink=inked;if(it.el)it.el.classList.remove('held','tip');setTool('hand');}
+  if(it.el){it.el.remove();it.el=null;}if(it.t0){it.out+=Date.now()-it.t0;it.t0=null;}it.btn.classList.remove('out');snd.tick();tell(it.name+', back in its box.');
+}
+document.addEventListener('pointerdown',e=>{
+  const it=holding;if(!it||it.machine||!it.btn||e.button!==0)return;
+  /* closing the box with its tool in your hand puts the tool away with it */
+  const kb=e.target.closest('.kitbox');if(kb&&kb.dataset.kit===it.kit&&kb.getAttribute('aria-expanded')==='true'){stow(it);return;}
+  /* the tool itself may be under the pointer, so look at where the press is, not at what it landed on */
+  const panel=it.btn.closest('.kit,#pencase');if(!panel||!panel.offsetParent)return;
+  const R=panel.getBoundingClientRect();if(e.clientX<R.left||e.clientX>R.right||e.clientY<R.top||e.clientY>R.bottom)return;
+  const b=[...panel.querySelectorAll('button')].find(x=>{const r=x.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;});
+  if(b&&b!==it.btn){if(!b.classList.contains('out')&&e.target.closest('.loose')){e.preventDefault();e.stopPropagation();b.dispatchEvent(new PointerEvent('pointerdown',e));}return;}
+  audio();e.preventDefault();e.stopPropagation();stow(it);
+},true);
 /* the tool in use is the one that looks picked up; every other one just lies where it was left */
 /* Two modes, as in Paint: with the hand you move things; with a tool, the pointer IS that tool and clicks use it.
    A click on a tool takes it; Esc, the hand button, or holding the space bar gives you your hand back. */
