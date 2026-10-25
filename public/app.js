@@ -407,7 +407,7 @@ function inkCanvas(id){
 const baseF=inkCanvas('base'),wet=inkCanvas('wet'),marks=inkCanvas('marks'),baseO=inkCanvas('baseopen');
 baseO.width=1200;baseO.hidden=true;
 const baseE=inkCanvas('baseenv');baseE.width=1200;baseE.hidden=true;
-let mk=baseF.getContext('2d'),face='front';const wt=wet.getContext('2d');
+let mk=baseF.getContext('2d'),face='front';let wt=wet.getContext('2d');
 const origin={};
 function place(){
   const c=card.getBoundingClientRect(),a=app.getBoundingClientRect();
@@ -635,7 +635,7 @@ function setTool(t){
 /* the tool in your hand travels with it: beside the pointer while you draw or stamp, and at the end of the strip while you pull tape */
 function follow(e){
   const it=holding;if(!it||it.machine||!it.el||!it.el.isConnected)return;
-  const a=app.getBoundingClientRect(),c=card.getBoundingClientRect(),on=pull||mp,x=(on?Math.max(c.left,Math.min(c.right,e.clientX)):e.clientX)-a.left,y=(on?Math.max(c.top,Math.min(c.bottom,e.clientY)):e.clientY)-a.top;
+  const a=app.getBoundingClientRect(),c=card.getBoundingClientRect(),on=pull&&!pull.desk,x=(on?Math.max(c.left,Math.min(c.right,e.clientX)):e.clientX)-a.left,y=(on?Math.max(c.top,Math.min(c.bottom,e.clientY)):e.clientY)-a.top;
   if(it.kind==='tape'){
     /* the roll runs ahead of the strip, so the end of the tape is never underneath it */
     let ux=0,uy=-1;if(pull){const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d>4){ux=(pull.x1-pull.x0)/d;uy=(pull.y1-pull.y0)/d;}}
@@ -677,7 +677,29 @@ function glit(a,b){
     wt.fillStyle=gl.sp[Math.floor(Math.random()*gl.sp.length)];wt.fillRect(x,y,(1+Math.random()*1.5)*ku,(1+Math.random()*1.5)*ku);
   }
 }
-function seg(a,b){
+/* ---------- the table can be drawn on too: ink that misses the card, or starts beside it, stays on the table for good ---------- */
+const deskInk=document.createElement('canvas'),deskWet=document.createElement('canvas');let dk=deskInk.getContext('2d'),dwt=deskWet.getContext('2d'),deskDrag=false;
+[deskInk,deskWet].forEach(c=>{c.className='desk';c.setAttribute('aria-hidden','true');$('under').appendChild(c);});
+function sizeDesk(){
+  const r=app.getBoundingClientRect(),d=window.devicePixelRatio||1,w=Math.ceil(Math.max(r.width,innerWidth)),h=Math.ceil(Math.max(r.height,innerHeight));
+  if(deskInk.width>=w*d&&deskInk.height>=h*d)return;
+  const old=document.createElement('canvas');old.width=deskInk.width;old.height=deskInk.height;if(old.width)old.getContext('2d').drawImage(deskInk,0,0);
+  [deskInk,deskWet].forEach(c=>{c.width=w*d;c.height=h*d;c.style.width=w+'px';c.style.height=h+'px';});
+  dk=deskInk.getContext('2d');dwt=deskWet.getContext('2d');dk.drawImage(old,0,0);dk.setTransform(d,0,0,d,0,0);dwt.setTransform(d,0,0,d,0,0);
+}
+sizeDesk();addEventListener('resize',sizeDesk);
+function cardToApp(p){const c=card.getBoundingClientRect(),A=app.getBoundingClientRect();return [c.left-A.left+p[0]*c.width/MW,c.top-A.top+p[1]*c.height/MH];}
+function cardRectApp(){const c=card.getBoundingClientRect(),A=app.getBoundingClientRect();return [c.left-A.left,c.top-A.top,c.width,c.height];}
+/* the same stroke, drawn in table space; the card hides the part under it, and that part is wiped from the table when the stroke ends */
+function deskSeg(a,b){const A=cardToApp(a),B=cardToApp(b),kw=ku,prev=wt;wt=dwt;ku=1;try{segCard(A,B);}finally{wt=prev;ku=kw;}}
+function deskSettle(alpha){
+  const r=cardRectApp();dwt.clearRect(r[0],r[1],r[2],r[3]);
+  dk.save();dk.setTransform(1,0,0,1,0,0);dk.globalAlpha=alpha||(tool==='white'?.93:1);dk.drawImage(deskWet,0,0);dk.restore();
+  dwt.save();dwt.setTransform(1,0,0,1,0,0);dwt.clearRect(0,0,deskWet.width,deskWet.height);dwt.restore();
+}
+let touched=false;
+function seg(a,b){const m=60;if(Math.max(a[0],b[0])>-m&&Math.min(a[0],b[0])<MW+m&&Math.max(a[1],b[1])>-m&&Math.min(a[1],b[1])<MH+m)touched=true;segCard(a,b);deskSeg(a,b);}
+function segCard(a,b){
   if(tool==='glitter'){glit(a,b);return;}
   const w=tool==='white';
   const it=holding&&!holding.machine?holding:null,size=tool==='pen'?pen.tip:wtip;let lw=(w?14:4.5)*ku*size,dry=0;
@@ -841,8 +863,10 @@ function press1(p){
   x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='destination-out';
   for(let i=0,n=260+(1-inked)*1400;i<n;i++){x.globalAlpha=.3+Math.random()*.7;x.fillRect(Math.random()*220,Math.random()*220,1+Math.random()*2.5,1+Math.random()*2.5);}
   const size=84*ku;
-  wt.save();wt.translate(p[0],p[1]);wt.rotate((Math.random()-.5)*.2);wt.globalAlpha=Math.max(.1,inked);wt.drawImage(s,-size/2,-size/2,size,size);wt.restore();
-  settle(1);snd.punch();inked=Math.max(.08,inked*.68);
+  const rot=(Math.random()-.5)*.2;
+  wt.save();wt.translate(p[0],p[1]);wt.rotate(rot);wt.globalAlpha=Math.max(.1,inked);wt.drawImage(s,-size/2,-size/2,size,size);wt.restore();
+  {const q=cardToApp(p),sz=size/ku;dwt.save();dwt.translate(q[0],q[1]);dwt.rotate(rot);dwt.globalAlpha=Math.max(.1,inked);dwt.drawImage(s,-sz/2,-sz/2,sz,sz);dwt.restore();}
+  touched=p[0]>-42*ku&&p[0]<MW+42*ku&&p[1]>-42*ku&&p[1]<MH+42*ku;settle(1);deskSettle(1);snd.punch();inked=Math.max(.08,inked*.68);
 }
 /* ---------- sticker letters: three sheets in three styles; every sticker is drawn once, shown on its sheet, and can be peeled off only once ---------- */
 const SUPPLY='AAAABBCCDDEEEEFFGGHHIIIJKLLMMNNÑOOOOPPQRRSSSTTUUUVWXYYZ0123456789!!??♥♥&.,';
@@ -900,6 +924,7 @@ function drawSheet(){
         document.removeEventListener('pointermove',at);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);fly.remove();
         const c=card.getBoundingClientRect();
         if(ev.type==='pointerup'&&ev.clientX>c.left&&ev.clientX<c.right&&ev.clientY>c.top&&ev.clientY<c.bottom){lifted=st;stickLetter(ev);}
+        else if(ev.type==='pointerup'&&bareTable(ev)){lifted=st;stickLetter(ev,true);}
         else{im.style.visibility='';snd.tick();}
       };
       document.addEventListener('pointermove',at);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
@@ -910,10 +935,18 @@ function drawSheet(){
 document.querySelectorAll('[data-sheet]').forEach(b=>b.addEventListener('click',()=>{audio();sheetOf=b.dataset.sheet;lifted=null;if(holding&&holding.tool==='letter')dropHold();snd.tick();document.querySelectorAll('[data-sheet]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawSheet();}));
 /* the stickers are drawn with the page's fonts, so wait for those before drawing any */
 (document.fonts?Promise.all([document.fonts.load('46px Bungee'),document.fonts.load('700 50px Fredoka')]).catch(()=>{}):Promise.resolve()).then(drawSheet);
-function stickLetter(e){
+/* is this spot plain table, with nothing lying or standing on it? */
+function bareTable(e){const t=document.elementFromPoint(e.clientX,e.clientY);return !!t&&app.contains(t)&&!t.closest('#marks,#card,button,label,input,.piece,.loose,#sheet,#side,#cutbar,#shelf,#mail,#trashview,#paperbar,#envbar,.cardhead,#desktoponly,#kits');}
+function stickLetter(e,desk){
   if(!lifted||lifted.used){snd.tick();return;}
+  if(desk){
+    const cv=lifted.cv,w=cv._w,h=cv._h,a=app.getBoundingClientRect();
+    dwt.drawImage(cv,e.clientX-a.left-w/2,e.clientY-a.top-h/2,w,h);deskSettle(1);
+    lifted.used=true;tell('The letter '+lifted.ch+', stuck to the table.');lifted=null;drawSheet();snd.glue();return;
+  }
   const cv=lifted.cv,w=cv._w,h=cv._h,a=app.getBoundingClientRect(),el=addPiece(cv,w,h,e.clientX-a.left-w/2,e.clientY-a.top-h/2);
-  el.dataset.peel='1';el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
+  el.dataset.peel='1';el.dataset.dry='1';el.classList.add('dry');
+  el.dataset.glued='1';el.dataset.face=face;
   lifted.used=true;tell('The letter '+lifted.ch+', stuck down.');lifted=null;drawSheet();snd.glue();$('cardhint').hidden=true;
 }
 /* ---------- sticky tape: pull a strip across the card; it sticks at once and becomes a piece like any other ---------- */
@@ -968,6 +1001,14 @@ kit($('rolls'),Object.keys(ROLLS).map(k=>{
   return {name:k+' tape',art:c,data:{roll:k},tool:'tape',kind:'tape'};
 }),it=>{roll=it.data.roll;},'tape');
 function pulling(e){
+  if(pull.desk){
+    /* a strip pulled across the table: drawn in table space, and nothing of it will stick to the card */
+    pull.x1=e.clientX;pull.y1=e.clientY;const A=app.getBoundingClientRect();
+    dwt.save();dwt.setTransform(1,0,0,1,0,0);dwt.clearRect(0,0,deskWet.width,deskWet.height);dwt.restore();
+    dwt.lineCap='butt';dwt.lineWidth=TAPE_W;dwt.strokeStyle=ROLLS[roll];dwt.beginPath();dwt.moveTo(pull.x0-A.left,pull.y0-A.top);dwt.lineTo(pull.x1-A.left,pull.y1-A.top);dwt.stroke();
+    const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d-pull.said>40){pull.said=d;noise(.05,'highpass',2500,.12);}
+    return;
+  }
   const cr=card.getBoundingClientRect(),cx=Math.max(cr.left+2,Math.min(cr.right-2,e.clientX)),cy=Math.max(cr.top+2,Math.min(cr.bottom-2,e.clientY));
   pull.x1=cx;pull.y1=cy;const p=mpos({clientX:cx,clientY:cy});
   wt.clearRect(0,0,MW,MH);wt.lineCap='butt';wt.lineWidth=TAPE_W*ku;wt.strokeStyle=ROLLS[roll];
@@ -975,7 +1016,7 @@ function pulling(e){
   const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d-pull.said>40){pull.said=d;noise(.05,'highpass',2500,.12);}
 }
 function stick(){
-  const t=pull;pull=null;wt.clearRect(0,0,MW,MH);
+  const t=pull;pull=null;wt.clearRect(0,0,MW,MH);dwt.save();dwt.setTransform(1,0,0,1,0,0);dwt.clearRect(0,0,deskWet.width,deskWet.height);dwt.restore();
   const L=Math.hypot(t.x1-t.x0,t.y1-t.y0);if(L<24)return;
   const a=app.getBoundingClientRect(),cv=document.createElement('canvas'),k=2,H=TAPE_W;
   cv.width=Math.round(L*k);cv.height=H*k;const x=cv.getContext('2d');x.scale(k,k);
@@ -989,10 +1030,15 @@ function stick(){
   /* a roll left lying around gathers fluff, and it comes off with the tape */
   if(holding&&holding.kind==='tape'){const f=Math.min(1,age(holding)/SPOIL.tape);x.strokeStyle='rgba(60,50,40,.6)';x.lineWidth=.8;
     for(let i=0,n=Math.round(f*L/9);i<n;i++){const fx=Math.random()*L,fy=Math.random()*H;x.beginPath();x.moveTo(fx,fy);x.quadraticCurveTo(fx+Math.random()*8-4,fy+Math.random()*8-4,fx+Math.random()*10-5,fy+Math.random()*10-5);x.stroke();}}x.fillStyle='rgba(255,255,255,.22)';x.fillRect(0,3,L,3);x.fillStyle='rgba(17,17,17,.08)';x.fillRect(0,H-4,L,4);
+  if(t.desk){
+    /* stuck to the table, it becomes part of the table: under the card, cut at the card's edge, and there for good */
+    dwt.save();dwt.translate((t.x0+t.x1)/2-a.left,(t.y0+t.y1)/2-a.top);dwt.rotate(Math.atan2(t.y1-t.y0,t.x1-t.x0));dwt.drawImage(cv,-L/2,-H/2,L,H);dwt.restore();
+    deskSettle(1);snd.glue();tell('A strip of tape, stuck to the table.');return;
+  }
   const el=addPiece(cv,L,H,(t.x0+t.x1)/2-a.left-L/2,(t.y0+t.y1)/2-a.top-H/2);
   el.style.setProperty('--r',(Math.atan2(t.y1-t.y0,t.x1-t.x0)*180/Math.PI).toFixed(1)+'deg');
-  el.dataset.sticky='1';el.dataset.glued='1';el.dataset.face=face;el.dataset.dry='1';el.classList.add('dry');
-  snd.glue();tell('A strip of tape, stuck down.');
+  el.dataset.sticky='1';el.dataset.dry='1';el.classList.add('dry');
+  el.dataset.glued='1';el.dataset.face=face;snd.glue();tell('A strip of tape, stuck down.');
 }
 /* One rule for every tool: a tap makes it bigger and it is in your hand; another tap makes it small again and then it is only a thing you can carry.
    While it is big, presses on the card go to the card, even where the tool itself lies: only a tap that does not move puts it down. */
@@ -1005,20 +1051,29 @@ marks.addEventListener('pointerdown',e=>{
   e.preventDefault();
   begin(e);
 });
+app.addEventListener('pointerdown',e=>{
+  if(!holding||holding.machine||!['pen','glitter','white','tape','stamp'].includes(tool)||e.button!==0)return;
+  if(!bareTable(e))return;
+  audio();e.preventDefault();deskDrag=true;try{app.setPointerCapture(e.pointerId);}catch(_){}
+  begin(e);
+});
+app.addEventListener('pointermove',e=>{if(deskDrag)moveStroke(e);});
+app.addEventListener('pointerup',()=>{if(deskDrag)mend();});app.addEventListener('pointercancel',()=>{if(deskDrag)mend();});
 function begin(e){
-  follow(e);
+  follow(e);touched=false;
   if(tool==='letter'){stickLetter(e);$('cardhint').hidden=true;return;}
   if(tool==='stamp'){ku=MW/marks.getBoundingClientRect().width;press1(mpos(e));$('cardhint').hidden=true;return;}
-  if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0};$('cardhint').hidden=true;return;}
+  if(tool==='tape'){ku=MW/marks.getBoundingClientRect().width;pull={p:mpos(e),x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY,said:0,desk:deskDrag};$('cardhint').hidden=true;return;}
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;
 }
-marks.addEventListener('pointermove',e=>{
+function moveStroke(e){
   if(waiting){if(Math.hypot(e.clientX-waiting.clientX,e.clientY-waiting.clientY)<6)return;const w=waiting;waiting=null;begin(w);}
   if(pull){pulling(e);follow(e);return;}
   if(mp)follow(e);
   if(!mp)return;const p=mpos(e),d=Math.hypot(p[0]-mp[0],p[1]-mp[1]);if(d<3)return;
   seg(mp,p);mp=p;mtrav+=d;if(mtrav>70){mtrav=0;snd.mark();}
-});
+}
+marks.addEventListener('pointermove',moveStroke);
 /* When the pen lifts, the stroke sinks into the topmost paper under each part of it: pieces first (top to bottom), the card last. */
 function settle(force){
   const alpha=force||(tool==='white'?.93:1);
@@ -1044,10 +1099,10 @@ function settle(force){
     wt.globalCompositeOperation='destination-out';wt.drawImage(p,0,0);wt.restore();
   });
   mk.save();mk.globalAlpha=alpha;mk.drawImage(wet,0,0);mk.restore();
-  if(face!=='env'){paperUsed=true;paperState();}
+  if(face!=='env'&&touched){paperUsed=true;paperState();}
   wt.clearRect(0,0,MW,MH);
 }
-const mend=()=>{if(waiting){waiting=null;putDown();snd.tick();return;}if(pull){stick();return;}if(!mp)return;mp=null;settle();};
+const mend=()=>{deskDrag=false;if(waiting){waiting=null;putDown();snd.tick();return;}if(pull){stick();return;}if(!mp)return;mp=null;settle();deskSettle();};
 marks.addEventListener('pointerup',mend);marks.addEventListener('pointercancel',mend);
 
 function toTrash(el){if(el===taped)showTape(null);

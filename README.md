@@ -19,6 +19,7 @@ It follows two rules:
 - **Copier**: tap any piece and a black-and-white copy of it comes out onto the table. A copy of a copy comes out worse.
 - **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card. The sound you touched last can be played slow or fast, and backwards, like a tape.
 - **Your hand and your tools**: when you hold nothing, the pointer is a pixel hand and you can move anything (pieces, sheets, tools). Click a tool, in its box or lying on the table, and the pointer becomes that tool: clicks and drags use it, and nothing gets moved. Esc, the hand button on the shelf, or holding the space bar gives you your hand back; the tool stays lying where you were. Things left out spoil for good: markers dry, white-out thickens, an open glitter tube leaks onto the table, tape gathers fluff, ink pads dry while their box is open, and an inky stamp prints where you put it down.
+- **The table takes marks too**: pens, crayons, glitter glue, white-out and stamps work on the table as well as on the card, and a stroke can run off the card onto the table (or the other way). Tape pulled on the table sticks to it, cut at the card's edge, and a sticker let go on the table sticks there. What is on the table stays there while the page is open, whichever side of the card you are working on, and is never sent with the card.
 - **The trash**: drag anything into it, tools included. Click the can to look inside and pick anything to take back out.
 - **Tidy up** puts every tool lying on the table back in its box at once.
 - **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
@@ -71,7 +72,7 @@ The server accepts at most 30 new cards per hour from one address, and each pict
 
 - A card cannot be changed or deleted once its envelope is closed.
 - A card is removed 14 days after its envelope is closed (`KEEP_DAYS` in `server.js`). Until then, the maker and the recipient each get a button that names the last day and saves the card as one file, `card.html`, which opens like the link does and holds the pictures and sounds.
-- The table (loose pieces, sheets, the trash) lasts only while the page is open.
+- The table (loose pieces, sheets, the trash and anything drawn or stuck on it) lasts only while the page is open.
 - Recording needs the browser's permission to use the microphone, and the page must be served over https (Railway does this) or from localhost.
 - Recordings use the format the maker's browser produces. Most combinations play fine, but an older Safari may not play a recording made in Chrome or Firefox.
 - A piece with a sound or a pin always shows on top of the other pieces for the recipient, even if you glued something over it.
