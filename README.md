@@ -18,7 +18,7 @@ It follows two rules:
 - **Letters**: three sheets of sticker letters (glitter, bubble, tiles). Every sticker is shown on its sheet; drag one off the sheet and let go over the card to stick it. Each exists once, so a sheet can run out of a letter.
 - **Copier**: tap any piece and a black-and-white copy of it comes out onto the table. A copy of a copy comes out worse.
 - **Sound**: pick Sound, then hold a piece to record up to 5 seconds onto it; tap it to hear it. Holding again records over it. "When the card opens" holds up to 10 seconds that play when the recipient opens the card. The sound you touched last can be played slow or fast, and backwards, like a tape.
-- **Boxes and the mess**: every tool lives in a box on the shelf. Tap a box to open it on the table, then drag a tool out and let go. Tap a tool and it gets bigger: it is in your hand and works on the card. Tap it again and it is small: it does nothing, and you can carry it anywhere. Tools stay where you leave them until you drag them back to their box (or into the trash). Things left out spoil for good: markers dry, white-out thickens and blocks, an open glitter tube leaks onto the table, tape gathers fluff, ink pads dry while their box is open, and an inky stamp prints where you put it down.
+- **Your hand and your tools**: when you hold nothing, the pointer is a pixel hand and you can move anything (pieces, sheets, tools). Click a tool, in its box or lying on the table, and the pointer becomes that tool: clicks and drags use it, and nothing gets moved. Esc, the hand button on the shelf, or holding the space bar gives you your hand back; the tool stays lying where you were. Things left out spoil for good: markers dry, white-out thickens, an open glitter tube leaks onto the table, tape gathers fluff, ink pads dry while their box is open, and an inky stamp prints where you put it down.
 - **The trash**: drag anything into it, tools included. Click the can to look inside and pick anything to take back out.
 - **Tidy up** puts every tool lying on the table back in its box at once.
 - **The envelope**: pick its color, decorate it, put the card in, try opening it, then close it. Closing saves the card and gives a link.
@@ -76,3 +76,5 @@ The server accepts at most 30 new cards per hour from one address, and each pict
 - Recordings use the format the maker's browser produces. Most combinations play fine, but an older Safari may not play a recording made in Chrome or Firefox.
 - A piece with a sound or a pin always shows on top of the other pieces for the recipient, even if you glued something over it.
 - On a phone, a piece cannot yet be dragged from a sheet to a card that is off screen.
+
+- Making cards is desktop-only for now: on phones, tablets and windows narrower than 1100 pixels the maker shows a message instead. Received cards open on any device.

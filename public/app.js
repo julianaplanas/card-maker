@@ -300,6 +300,7 @@ function drag(el){
   let held=false,ox=0,oy=0,sx=0,sy=0,sr=0,sz='6',wasGlued=false,wasDry=false;
   el.addEventListener('pointerdown',e=>{
     audio();
+    if(holding&&!holding.machine&&tool!=='copy'){e.preventDefault();return;}
     if(tool==='sound'){press(el,e,5000,()=>el._snd,u=>{el._snd=u;el.classList.add('loud');});return;}
     if(tool==='copy'){copyPiece(el);e.preventDefault();return;}
     if(pinned(el)){el.classList.remove('stuck');void el.offsetWidth;el.classList.add('stuck');snd.tick();tell('Held down by tape.');e.preventDefault();return;}
@@ -441,9 +442,33 @@ function holdable(b,it){
 }
 function showHand(){}
 /* the tool in use is the one that looks picked up; every other one just lies where it was left */
+/* Two modes, as in Paint: with the hand you move things; with a tool, the pointer IS that tool and clicks use it.
+   A click on a tool takes it; Esc, the hand button, or holding the space bar gives you your hand back. */
+let lastPt=null;
 function activate(it){
-  if(holding===it)return;if(holding)putDown();
-  holding=it;it.el.classList.add('held');it.apply();setTool(it.tool);tell(it.name+', in your hand.');
+  if(holding===it)return;
+  /* switching straight to another tool: the one you had goes back where you took it from */
+  if(holding&&!holding.machine&&holding.home&&holding.el){holding.el.style.left=holding.home[0]+'px';holding.el.style.top=holding.home[1]+'px';holding.el.style.setProperty('--r',holding.home[2]);const h=holding;putDown();backInBox(h,true);}
+  else if(holding)putDown();
+  it.home=[it.el.offsetLeft,it.el.offsetTop,it.el.style.getPropertyValue('--r')];
+  holding=it;it.el.classList.add('held');it.el.style.zIndex=String(100000+ ++z);it.apply();setTool(it.tool);tell(it.name+', in your hand. Press Esc for your hand again.');
+  if(lastPt)follow(lastPt);
+}
+/* a tool put down over its own box, or over the open box it came from, goes back inside */
+function backInBox(it,quiet){
+  if(!it||!it.el||!it.btn)return false;
+  const box=document.querySelector('.kitbox[data-kit="'+it.kit+'"]'),panel=it.btn.closest('.kit,#pencase');
+  if(inside(it.el,box,8)||(panel&&!panel.hidden&&panel.offsetParent&&inside(it.el,panel,0))){
+    it.el.remove();it.el=null;if(it.t0){it.out+=Date.now()-it.t0;it.t0=null;}it.btn.classList.remove('out');if(!quiet){snd.tick();tell(it.name+', back in its box.');}return true;
+  }
+  return false;
+}
+function handBack(){
+  if(!holding)return;const it=holding;
+  /* a tool is never left lying on the shelf: if your hand is up there (at the hand button, say), the tool goes back where you took it from */
+  if(!it.machine&&it.el&&it.home){const r=it.el.getBoundingClientRect(),sh=$('shelf').getBoundingClientRect();if(r.top+r.height/2<sh.bottom){it.el.style.left=it.home[0]+'px';it.el.style.top=it.home[1]+'px';it.el.style.setProperty('--r',it.home[2]);}}
+  putDown();
+  if(!it.machine&&!backInBox(it))tell('Your hand again. The '+it.name.toLowerCase()+' is lying where you left it.');
 }
 function holdMachine(t,name){if(holding)putDown();holding={machine:true,tool:t,name:name};setTool(t);}
 function dropHold(){holding=null;setTool('hand');}
@@ -451,7 +476,7 @@ function putDown(){
   const it=holding;if(!it)return;holding=null;
   if(it.machine){const k=it.tool==='copy'?'copier':'recorder';document.querySelector('.kitbox[data-kit="'+k+'"]').setAttribute('aria-expanded','false');if(k==='recorder')$('sndopts').hidden=true;}
   else{
-    it.el.classList.remove('held');
+    it.el.classList.remove('held','tip');
     /* a stamp put down with ink still on it prints on the table */
     if(it.kind==='stamp'){it.ink=inked;if(it.ink>.25&&it.el.isConnected&&!inside(it.el,card,0)){
       const c=document.createElement('canvas');c.width=c.height=168;const q=c.getContext('2d');q.translate(84,84);q.scale(1.5,1.5);q.globalAlpha=Math.min(.8,it.ink);q.fillStyle=q.strokeStyle=COLORS[pad];STAMPS[it.data.stamp](q);
@@ -488,20 +513,14 @@ function carryTool(el,e,fresh,onTap){
     el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
     if(!moved){
       if(onTap){onTap();return;}
-      /* a tool only leaves its box in your hand: pressed and let go without carrying it anywhere, it stays in the box */
-      if(fresh){el.remove();it.el=null;it.t0=null;it.btn.classList.remove('out');}
-      else if(holding===it){putDown();snd.tick();}else{activate(it);snd.tick();}
+      /* a click takes the tool into your hand, from its box or from the table */
+      activate(it);snd.tick();
       return;
     }
     if(inside(el,bin,10)){if(holding===it)putDown();toTrash(el);return;}
-    const box=document.querySelector('.kitbox[data-kit="'+it.kit+'"]'),panel=it.btn.closest('.kit,#pencase');
-    if(inside(el,box,8)||(panel&&!panel.hidden&&panel.offsetParent&&inside(el,panel,0))){
-      if(holding===it)putDown();
-      el.remove();it.el=null;it.out+=Date.now()-it.t0;it.t0=null;it.btn.classList.remove('out');snd.tick();tell(it.name+', back in its box.');return;
-    }
+    if(backInBox(it))return;
+    /* dragged with the hand, a tool is only moved: it lies where you let go */
     it.leakAt=Date.now();
-    /* carried out of its box or onto the card, it is in your hand; carried off the card, it is put down and your hand is empty */
-    if(fresh)activate(it);
   };
   el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 }
@@ -606,7 +625,7 @@ let cutTool='scissors';
 let tool='hand',mp=null,mtrav=0;
 const toolBtns=document.querySelectorAll('[data-tool]');
 function setTool(t){
-  tool=t;setTimeout(tipped,0);
+  tool=t;setTimeout(tipped,0);app.classList.toggle('toolmode',t!=='hand');
   marks.classList.toggle('on',PENS.includes(tool)||tool==='tape'||tool==='stamp'||tool==='letter');
   wet.style.opacity=tool==='white'?'.93':'1';
   app.classList.toggle('sounding',tool==='sound');app.classList.toggle('copying',tool==='copy');if(tool!=='sound')showTape(null);
@@ -616,14 +635,14 @@ function setTool(t){
 /* the tool in your hand travels with it: beside the pointer while you draw or stamp, and at the end of the strip while you pull tape */
 function follow(e){
   const it=holding;if(!it||it.machine||!it.el||!it.el.isConnected)return;
-  const a=app.getBoundingClientRect(),c=card.getBoundingClientRect(),x=Math.max(c.left,Math.min(c.right,e.clientX))-a.left,y=Math.max(c.top,Math.min(c.bottom,e.clientY))-a.top;
+  const a=app.getBoundingClientRect(),c=card.getBoundingClientRect(),on=pull||mp,x=(on?Math.max(c.left,Math.min(c.right,e.clientX)):e.clientX)-a.left,y=(on?Math.max(c.top,Math.min(c.bottom,e.clientY)):e.clientY)-a.top;
   if(it.kind==='tape'){
     /* the roll runs ahead of the strip, so the end of the tape is never underneath it */
     let ux=0,uy=-1;if(pull){const d=Math.hypot(pull.x1-pull.x0,pull.y1-pull.y0);if(d>4){ux=(pull.x1-pull.x0)/d;uy=(pull.y1-pull.y0)/d;}}
     it.el.style.left=(x+ux*34-30)+'px';it.el.style.top=(y+uy*34-30)+'px';it.el.style.setProperty('--r','0deg');
   }
   else if(it.kind==='stamp'){
-    /* a stamp stays standing on what it just printed, like a real one; lift it by stamping somewhere else */
+    /* the rubber of the stamp is at the pointer, so it prints exactly there */
     it.el.style.left=(x-it.w/2)+'px';it.el.style.top=(y-it.h*.62)+'px';it.el.style.setProperty('--r','0deg');
   }
   else{
@@ -635,13 +654,18 @@ function follow(e){
   }
 }
 /* the tools held like a pen let presses through to the card, and are drawn at the tip of the pointer even while it only hovers */
-function penlike(){return !!(holding&&!holding.machine&&holding.el&&['pen','glitter','white'].includes(holding.tool));}
+function penlike(){return !!(holding&&!holding.machine&&holding.el);}
 function tipped(){const on=penlike();app.classList.toggle('tipped',on);layer.querySelectorAll('.loose.tip').forEach(el=>{if(!on||el!==holding.el)el.classList.remove('tip');});if(on)holding.el.classList.add('tip');}
-document.addEventListener('pointerdown',e=>{
-  if(!penlike()||e.target===marks)return;
-  const r=holding.el.getBoundingClientRect();
-  if(e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom){e.preventDefault();e.stopPropagation();carryTool(holding.el,e,false);}
-},true);
+document.addEventListener('pointermove',e=>{lastPt={clientX:e.clientX,clientY:e.clientY};if(penlike()&&!pull&&!mp)follow(e);});
+document.addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
+  if(e.key==='Escape'&&holding){e.preventDefault();handBack();snd.tick();}
+  /* holding the space bar lends you your hand for a moment, as in drawing programs */
+  if(e.code==='Space'&&!e.repeat&&holding&&!holding.machine){e.preventDefault();const t=holding;putDown();spaceTool=t;}
+});
+let spaceTool=null;
+document.addEventListener('keyup',e=>{if(e.code==='Space'&&spaceTool){const t=spaceTool;spaceTool=null;if(t.el&&t.el.isConnected)activate(t);}});
+$('handbtn').addEventListener('click',()=>{audio();handBack();snd.tick();});
 function mpos(e){const r=marks.getBoundingClientRect();return [(e.clientX-r.left)*MW/r.width,(e.clientY-r.top)*MH/r.height];}
 let ku=2,tip=1;
 function glit(a,b){
@@ -979,9 +1003,6 @@ marks.addEventListener('pointerdown',e=>{
   if(lying&&!(holding&&holding.el===lying)){e.preventDefault();carryTool(lying,e,false);return;}
   try{marks.setPointerCapture(e.pointerId);}catch(_){}
   e.preventDefault();
-  /* a stamp is pressed by tapping, so tapping the stamp itself presses it again right there; dragging it carries it */
-  if(lying&&tool==='stamp'){try{marks.releasePointerCapture(e.pointerId);}catch(_){}carryTool(lying,e,false,()=>begin(e));return;}
-  if(lying){waiting=e;return;}
   begin(e);
 });
 function begin(e){
@@ -992,7 +1013,6 @@ function begin(e){
   ku=MW/marks.getBoundingClientRect().width;mp=mpos(e);mtrav=0;seg(mp,mp);$('cardhint').hidden=true;
 }
 marks.addEventListener('pointermove',e=>{
-  if(!pull&&!mp&&!waiting&&penlike())follow(e);
   if(waiting){if(Math.hypot(e.clientX-waiting.clientX,e.clientY-waiting.clientY)<6)return;const w=waiting;waiting=null;begin(w);}
   if(pull){pulling(e);follow(e);return;}
   if(mp)follow(e);
@@ -1302,5 +1322,8 @@ $('newcard').addEventListener('click',()=>{audio();wipe(['front','open']);quiet(
 
 Object.keys(KITS).forEach(k=>{if(KITS[k])$(KITS[k]).hidden=true;});$('penopts').hidden=true;
 document.addEventListener('pointerup',()=>setTimeout(paperState,0));
+/* the hand closes while it holds something */
+document.addEventListener('pointerdown',e=>{if(e.button===0)app.classList.add('grabbing');});
+document.addEventListener('pointerup',()=>app.classList.remove('grabbing'));
 dock();
 })();
